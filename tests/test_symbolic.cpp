@@ -79,7 +79,7 @@ public:
         ARIADNE_TESTING_PROVE(
             identical(simplify(derivative(tanh(RealExpression(x)),x)),
                       1-sqr(tanh(RealExpression(x)))));
-        ARIADNE_TESTING_PROVE(expr[0].kind()!=OperatorKind::CONSTANT);
+        ARIADNE_TESTING_PROVE(expr[0].kind()!=OperatorKind::NULLARY);
     }
 };
 
