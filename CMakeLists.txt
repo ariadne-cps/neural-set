@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(NeuroSymbolic VERSION 0.1.0)
+project(Neurosymbolic VERSION 0.1.0)
 
 option(WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 option(BUILD_PYTHON_BINDINGS "Build Python bindings" ON)
@@ -38,7 +38,7 @@ add_subdirectory(ss)
 add_library(neurosymbolic INTERFACE)
 target_include_directories(neurosymbolic INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include/ariadne-neuro-symbolic>
+    $<INSTALL_INTERFACE:include/ariadne-neurosymbolic>
 )
 target_link_libraries(neurosymbolic INTERFACE neural symbolic)
 
@@ -47,18 +47,18 @@ target_link_libraries(NEUROSYMBOLIC_SRC PRIVATE neurosymbolic)
 
 ariadne_register_public_headers(
     TARGET neurosymbolic
-    DIRECTORIES "${PROJECT_SOURCE_DIR}/include/neuro_symbolic"
-    FILES "${PROJECT_SOURCE_DIR}/include/ariadne-neuro-symbolic.hpp"
+    DIRECTORIES "${PROJECT_SOURCE_DIR}/include/neurosymbolic"
+    FILES "${PROJECT_SOURCE_DIR}/include/ariadne-neurosymbolic.hpp"
 )
 
 setup_project_library(
-    TARGET ariadne-neuro-symbolic
+    TARGET ariadne-neurosymbolic
     OBJECTS NEUROSYMBOLIC_SRC
     LINK_LIBRARIES neurosymbolic
 )
 
 setup_standalone_project_tests(
-    TARGET ariadne-neuro-symbolic
+    TARGET ariadne-neurosymbolic
     TEST_DIRECTORY tests
     TEST_TARGET tests
     SOURCES
@@ -73,6 +73,6 @@ endif()
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     ariadne_install_dependency_bundle(
         TARGET neurosymbolic
-        DESTINATION include/ariadne-neuro-symbolic
+        DESTINATION include/ariadne-neurosymbolic
     )
 endif()

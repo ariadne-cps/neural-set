@@ -6,23 +6,23 @@
  ****************************************************************************/
 
 /*
- *  This file is part of Ariadne Neuro-Symbolic.
+ *  This file is part of Ariadne Neurosymbolic.
  *
- *  Ariadne Neuro-Symbolic is free software: you can redistribute it and/or
+ *  Ariadne Neurosymbolic is free software: you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License as published
  *  by the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  Ariadne Neuro-Symbolic is distributed in the hope that it will be useful,
+ *  Ariadne Neurosymbolic is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with Ariadne Neuro-Symbolic. If not, see <https://www.gnu.org/licenses/>.
+ *  along with Ariadne Neurosymbolic. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "ariadne-neuro-symbolic.hpp"
+#include "ariadne-neurosymbolic.hpp"
 #include "ariadne-testing.hpp"
 #include "numeric/builtin.hpp"
 #include "numeric/real.hpp"
@@ -41,7 +41,7 @@ public:
         NeuralParameterSnapshot model(
             NeuralNetwork(2,{{1,NeuralActivation::Identity}}),
             {2.0,-3.0,0.5});
-        auto const expr=neuro_symbolic_expand(model,{x,y});
+        auto const expr=neurosymbolic_expand(model,{x,y});
         ARIADNE_TESTING_EXPECT_EQUAL(expr.size(),std::size_t{1});
         // Mathematical real arithmetic; both derivatives are constant.
         ARIADNE_TESTING_PROVE(identical(
@@ -54,9 +54,9 @@ public:
         ARIADNE_TESTING_EXPECT_EQUAL(
             evaluate(expr[0],point),Real(ExactDouble(-3.5)));
         ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
-            (void)neuro_symbolic_expand(model,{x}));
+            (void)neurosymbolic_expand(model,{x}));
         ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
-            (void)neuro_symbolic_expand(model,{x,x}));
+            (void)neurosymbolic_expand(model,{x,x}));
     }
 
     void test_supported_nonlinear_activations() {
@@ -69,13 +69,13 @@ public:
             NeuralParameterSnapshot model(
                 NeuralNetwork(1,{{1,activation}}),
                 {1.0,0.0});
-            auto expressions=neuro_symbolic_expand(model,{x});
+            auto expressions=neurosymbolic_expand(model,{x});
             ARIADNE_TESTING_EXPECT_EQUAL(expressions.size(),std::size_t{1});
         }
         NeuralParameterSnapshot smooth(
             NeuralNetwork(1,{{1,NeuralActivation::Tanh}}),
             {1.0,0.0});
-        auto const expr=neuro_symbolic_expand(smooth,{x});
+        auto const expr=neurosymbolic_expand(smooth,{x});
         ARIADNE_TESTING_PROVE(
             identical(simplify(derivative(tanh(RealExpression(x)),x)),
                       1-sqr(tanh(RealExpression(x)))));

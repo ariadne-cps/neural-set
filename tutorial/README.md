@@ -1,4 +1,4 @@
-# Neuro-Symbolic standalone tutorial
+# Neurosymbolic standalone tutorial
 
 This is an installation and public-API smoke test, using the same structure
 as the standalone Neural tutorial. It tests the installed shared library,

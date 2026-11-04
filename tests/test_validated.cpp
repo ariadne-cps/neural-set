@@ -6,23 +6,23 @@
  ****************************************************************************/
 
 /*
- *  This file is part of Ariadne Neuro-Symbolic.
+ *  This file is part of Ariadne Neurosymbolic.
  *
- *  Ariadne Neuro-Symbolic is free software: you can redistribute it and/or
+ *  Ariadne Neurosymbolic is free software: you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License as published
  *  by the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  Ariadne Neuro-Symbolic is distributed in the hope that it will be useful,
+ *  Ariadne Neurosymbolic is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with Ariadne Neuro-Symbolic. If not, see <https://www.gnu.org/licenses/>.
+ *  along with Ariadne Neurosymbolic. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "ariadne-neuro-symbolic.hpp"
+#include "ariadne-neurosymbolic.hpp"
 #include "neural/backend.hpp"
 #include "ariadne-testing.hpp"
 
@@ -40,7 +40,7 @@ public:
         NeuralParameterSnapshot model(
             NeuralNetwork(2,{{1,NeuralActivation::Identity}}),
             {2.0,-3.0,0.5});
-        auto const bounds=NeuralValidatedEvaluator(model).bounds(
+        auto const bounds=NeurosymbolicValidatedEvaluator(model).bounds(
             {{-1.0,2.0},{4.0,5.0}});
         ARIADNE_TESTING_EXPECT_EQUAL(bounds.size(),std::size_t{1});
         ARIADNE_TESTING_PROVE(bounds[0].lower<=-16.5);
@@ -63,7 +63,7 @@ public:
             NeuralParameterSnapshot model(
                 NeuralNetwork(1,{{1,activation}}),
                 {1.25,-0.5});
-            auto const bounds=neuro_symbolic_validated_bounds(model,{{-3.0,4.0}});
+            auto const bounds=neurosymbolic_validated_bounds(model,{{-3.0,4.0}});
             ARIADNE_TESTING_EXPECT_EQUAL(bounds.size(),std::size_t{1});
             ARIADNE_TESTING_PROVE(bounds[0].lower<=bounds[0].upper);
             NeuralExecutionSession cpu(model);
@@ -92,7 +92,7 @@ public:
             NeuralNetwork(2,{{2,NeuralActivation::Relu},
                              {1,NeuralActivation::Identity}}),
             {1.0,-1.0,-1.0,1.0,0.0,0.0,1.0,1.0,0.0});
-        auto const bounds=neuro_symbolic_validated_bounds(
+        auto const bounds=neurosymbolic_validated_bounds(
             model,{{1.0,3.0},{0.0,2.0}});
         ARIADNE_TESTING_EXPECT_EQUAL(bounds.size(),std::size_t{1});
         NeuralExecutionSession cpu(model);
@@ -106,20 +106,20 @@ public:
             }
 
         ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
-            (void)neuro_symbolic_validated_bounds(model,{{0.0,1.0}}));
+            (void)neurosymbolic_validated_bounds(model,{{0.0,1.0}}));
         ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
-            (void)neuro_symbolic_validated_bounds(model,{{2.0,1.0},{0.0,1.0}}));
+            (void)neurosymbolic_validated_bounds(model,{{2.0,1.0},{0.0,1.0}}));
         ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
-            (void)neuro_symbolic_validated_bounds(model,
+            (void)neurosymbolic_validated_bounds(model,
             {{0.0,std::numeric_limits<double>::infinity()},{0.0,1.0}}));
         ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
-            (void)neuro_symbolic_validated_bounds(model,
+            (void)neurosymbolic_validated_bounds(model,
             {{0.0,std::numeric_limits<double>::quiet_NaN()},{0.0,1.0}}));
         NeuralParameterSnapshot overflow(
             NeuralNetwork(1,{{1,NeuralActivation::Identity}}),
             {1e308,0.0});
         ARIADNE_TESTING_EXPECT_THROWS(std::overflow_error,
-            (void)neuro_symbolic_validated_bounds(
+            (void)neurosymbolic_validated_bounds(
                 overflow,{{1e308,1e308}}));
     }
 };

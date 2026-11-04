@@ -1,4 +1,4 @@
-# Ariadne Neuro-Symbolic
+# Ariadne Neurosymbolic
 
 Mathematical integration of trained neural networks with Ariadne Symbolic,
 Function and validated Numeric facilities. This repository complements
@@ -8,7 +8,7 @@ network topology, inference, differentiation, training and persistence.
 ## Dependency architecture
 
 ```text
-neuro-symbolic
+neurosymbolic
   +-- neural                (frozen snapshots, training and CPU evaluation)
   |     +-- threading
   +-- symbolic              (expression DAGs and differentiation)
@@ -25,7 +25,7 @@ dependencies are added to Neural.
 **Rigorous interval bound propagation** on finite closed boxes:
 
 ```cpp
-NeuralValidatedEvaluator evaluator(snapshot);
+NeurosymbolicValidatedEvaluator evaluator(snapshot);
 auto result = evaluator.bounds({{-1.0, 1.0}});
 ```
 
@@ -41,7 +41,7 @@ floating-point execution order of Neural's approximate CPU engine.
 
 ```cpp
 RealVariable x("x");
-auto expressions = neuro_symbolic_expand(snapshot, {x});
+auto expressions = neurosymbolic_expand(snapshot, {x});
 auto derivative = Ariadne::derivative(expressions.at(0), x);
 ```
 
@@ -55,8 +55,8 @@ Symbolic dependency types.
 ## Build and tests
 
 ```sh
-git clone https://github.com/ariadne-cps/neuro-symbolic.git
-cd neuro-symbolic
+git clone https://github.com/ariadne-cps/neurosymbolic.git
+cd neurosymbolic
 git submodule update --init --recursive
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug \
     -DBUILD_PYTHON_BINDINGS=ON -DWARNINGS_AS_ERRORS=ON
@@ -81,7 +81,7 @@ must be configured for the new repository.
 - `reasoning` may consume this repository in future, but this module does
   not import the reasoning engine.
 
-See [doc/neuro_symbolic_design.md](doc/neuro_symbolic_design.md) for the
+See [doc/neurosymbolic_design.md](doc/neurosymbolic_design.md) for the
 implementation journal, numeric semantics and remaining acceptance criteria.
 
 License: GPL-3.0-or-later.

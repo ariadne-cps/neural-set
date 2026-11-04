@@ -1,32 +1,32 @@
 /***************************************************************************
- *            include/neuro_symbolic/symbolic.hpp
+ *            include/neurosymbolic/symbolic.hpp
  *
  *  Copyright  2026  Luca Geretti
  *
  ****************************************************************************/
 
 /*
- *  This file is part of Ariadne Neuro-Symbolic.
+ *  This file is part of Ariadne Neurosymbolic.
  *
- *  Ariadne Neuro-Symbolic is free software: you can redistribute it and/or
+ *  Ariadne Neurosymbolic is free software: you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License as published
  *  by the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  Ariadne Neuro-Symbolic is distributed in the hope that it will be useful,
+ *  Ariadne Neurosymbolic is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with Ariadne Neuro-Symbolic. If not, see <https://www.gnu.org/licenses/>.
+ *  along with Ariadne Neurosymbolic. If not, see <https://www.gnu.org/licenses/>.
  */
 
-/** @file neuro_symbolic/symbolic.hpp
+/** @file neurosymbolic/symbolic.hpp
  *  @brief Expansion of frozen dense networks into Ariadne real expressions.
  */
-#ifndef ARIADNE_NEURO_SYMBOLIC_SYMBOLIC_HPP
-#define ARIADNE_NEURO_SYMBOLIC_SYMBOLIC_HPP
+#ifndef ARIADNE_NEUROSYMBOLIC_SYMBOLIC_HPP
+#define ARIADNE_NEUROSYMBOLIC_SYMBOLIC_HPP
 
 #include "neural/network.hpp"
 #include "symbolic/expression.hpp"
@@ -47,10 +47,10 @@ namespace Ariadne {
  *  distinct variables; derivative() and simplify() can subsequently be
  *  applied to smooth expression regions using Symbolic.
  */
-std::vector<Expression<Real>> neuro_symbolic_expand(
+std::vector<Expression<Real>> neurosymbolic_expand(
     NeuralParameterSnapshot const& snapshot,
     std::vector<Variable<Real>> const& input_variables);
 
 } // namespace Ariadne
 
-#endif // ARIADNE_NEURO_SYMBOLIC_SYMBOLIC_HPP
+#endif // ARIADNE_NEUROSYMBOLIC_SYMBOLIC_HPP

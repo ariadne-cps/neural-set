@@ -6,23 +6,23 @@
  ****************************************************************************/
 
 /*
- *  This file is part of Ariadne Neuro-Symbolic.
+ *  This file is part of Ariadne Neurosymbolic.
  *
- *  Ariadne Neuro-Symbolic is free software: you can redistribute it and/or
+ *  Ariadne Neurosymbolic is free software: you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License as published
  *  by the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  Ariadne Neuro-Symbolic is distributed in the hope that it will be useful,
+ *  Ariadne Neurosymbolic is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with Ariadne Neuro-Symbolic. If not, see <https://www.gnu.org/licenses/>.
+ *  along with Ariadne Neurosymbolic. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "neuro_symbolic/validated.hpp"
+#include "neurosymbolic/validated.hpp"
 #include "numeric/floats.hpp"
 
 #include <cmath>
@@ -62,15 +62,15 @@ BoundsType activate(BoundsType const& interval, NeuralActivation activation) {
 
 } // namespace
 
-NeuralValidatedEvaluator::NeuralValidatedEvaluator(NeuralParameterSnapshot snapshot)
+NeurosymbolicValidatedEvaluator::NeurosymbolicValidatedEvaluator(NeuralParameterSnapshot snapshot)
     : snapshot_(std::move(snapshot)) { }
 
-NeuralParameterSnapshot const& NeuralValidatedEvaluator::snapshot() const noexcept {
+NeuralParameterSnapshot const& NeurosymbolicValidatedEvaluator::snapshot() const noexcept {
     return snapshot_;
 }
 
-std::vector<NeuralValidatedInterval> NeuralValidatedEvaluator::bounds(
-    std::vector<NeuralValidatedInterval> const& input_box) const {
+std::vector<NeurosymbolicValidatedInterval> NeurosymbolicValidatedEvaluator::bounds(
+    std::vector<NeurosymbolicValidatedInterval> const& input_box) const {
     auto const& network = snapshot_.network();
     if (input_box.size() != network.input_dimension())
         throw std::invalid_argument("Wrong number of validated neural inputs");
@@ -98,7 +98,7 @@ std::vector<NeuralValidatedInterval> NeuralValidatedEvaluator::bounds(
         }
         state.swap(output);
     }
-    std::vector<NeuralValidatedInterval> result;
+    std::vector<NeurosymbolicValidatedInterval> result;
     result.reserve(state.size());
     for (auto const& value : state)
         result.push_back({value.lower_raw().get_d(),
@@ -106,10 +106,10 @@ std::vector<NeuralValidatedInterval> NeuralValidatedEvaluator::bounds(
     return result;
 }
 
-std::vector<NeuralValidatedInterval> neuro_symbolic_validated_bounds(
+std::vector<NeurosymbolicValidatedInterval> neurosymbolic_validated_bounds(
     NeuralParameterSnapshot const& snapshot,
-    std::vector<NeuralValidatedInterval> const& input_box) {
-    return NeuralValidatedEvaluator(snapshot).bounds(input_box);
+    std::vector<NeurosymbolicValidatedInterval> const& input_box) {
+    return NeurosymbolicValidatedEvaluator(snapshot).bounds(input_box);
 }
 
 } // namespace Ariadne

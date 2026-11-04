@@ -56,7 +56,7 @@ jobs:
 
       - name: Build Release library and bindings
         if: matrix.build_type == 'Release'
-        run: cmake --build "${{ runner.workspace }}/build" --parallel "$NPROC" --target ariadne-neuro-symbolic bindings
+        run: cmake --build "${{ runner.workspace }}/build" --parallel "$NPROC" --target ariadne-neurosymbolic bindings
 
       - name: Install Release library
         if: matrix.build_type == 'Release'

@@ -6,20 +6,20 @@
 #  ****************************************************************************/
 
 # /*
-#  *  This file is part of Ariadne Neuro-Symbolic.
+#  *  This file is part of Ariadne Neurosymbolic.
 #  *
-#  *  Ariadne Neuro-Symbolic is free software: you can redistribute it and/or
+#  *  Ariadne Neurosymbolic is free software: you can redistribute it and/or
 #  *  modify it under the terms of the GNU General Public License as published
 #  *  by the Free Software Foundation, either version 3 of the License, or
 #  *  (at your option) any later version.
 #  *
-#  *  Ariadne Neuro-Symbolic is distributed in the hope that it will be useful,
+#  *  Ariadne Neurosymbolic is distributed in the hope that it will be useful,
 #  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 #  *  GNU General Public License for more details.
 #  *
 #  *  You should have received a copy of the GNU General Public License
-#  *  along with Ariadne Neuro-Symbolic. If not, see <https://www.gnu.org/licenses/>.
+#  *  along with Ariadne Neurosymbolic. If not, see <https://www.gnu.org/licenses/>.
 #  */
 
 import math
@@ -31,10 +31,10 @@ from pyariadne import (
     NeuralDenseLayerSpec,
     NeuralNetwork,
     NeuralParameterSnapshot,
-    NeuralValidatedInterval,
-    NeuralValidatedEvaluator,
-    neuro_symbolic_validated_bounds,
-    neuro_symbolic_version,
+    NeurosymbolicValidatedInterval,
+    NeurosymbolicValidatedEvaluator,
+    neurosymbolic_validated_bounds,
+    neurosymbolic_version,
     NeuralExecutionSession,
 )
 
@@ -47,7 +47,7 @@ def model(activation):
 
 
 def test_version():
-    assert neuro_symbolic_version() == "0.1.0"
+    assert neurosymbolic_version() == "0.1.0"
 
 
 def test_exact_affine_corner_oracle():
@@ -55,9 +55,9 @@ def test_exact_affine_corner_oracle():
         NeuralNetwork(2, [NeuralDenseLayerSpec(1, NeuralActivation.Identity)]),
         [2, -3, 0.5],
     )
-    result = NeuralValidatedEvaluator(snap).bounds([
-        NeuralValidatedInterval(-1, 2),
-        NeuralValidatedInterval(4, 5),
+    result = NeurosymbolicValidatedEvaluator(snap).bounds([
+        NeurosymbolicValidatedInterval(-1, 2),
+        NeurosymbolicValidatedInterval(4, 5),
     ])
     assert len(result) == 1
     assert -17 < result[0].lower <= -16.5
@@ -73,8 +73,8 @@ def test_exact_affine_corner_oracle():
 ])
 def test_all_activations_contain_points(activation):
     snap = model(activation)
-    bounds = neuro_symbolic_validated_bounds(
-        snap, [NeuralValidatedInterval(-3, 4)])[0]
+    bounds = neurosymbolic_validated_bounds(
+        snap, [NeurosymbolicValidatedInterval(-3, 4)])[0]
     cpu = NeuralExecutionSession(snap)
     assert math.isfinite(bounds.lower)
     assert math.isfinite(bounds.upper)
@@ -86,7 +86,7 @@ def test_all_activations_contain_points(activation):
 
 def test_bad_input_box():
     snap = model(NeuralActivation.Identity)
-    for bad in ([], [NeuralValidatedInterval(2, 1)],
-                [NeuralValidatedInterval(0, math.inf)]):
+    for bad in ([], [NeurosymbolicValidatedInterval(2, 1)],
+                [NeurosymbolicValidatedInterval(0, math.inf)]):
         with pytest.raises(ValueError):
-            neuro_symbolic_validated_bounds(snap, bad)
+            neurosymbolic_validated_bounds(snap, bad)

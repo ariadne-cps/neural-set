@@ -6,46 +6,46 @@
  ****************************************************************************/
 
 /*
- *  This file is part of Ariadne Neuro-Symbolic.
+ *  This file is part of Ariadne Neurosymbolic.
  *
- *  Ariadne Neuro-Symbolic is free software: you can redistribute it and/or
+ *  Ariadne Neurosymbolic is free software: you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License as published
  *  by the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  Ariadne Neuro-Symbolic is distributed in the hope that it will be useful,
+ *  Ariadne Neurosymbolic is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with Ariadne Neuro-Symbolic. If not, see <https://www.gnu.org/licenses/>.
+ *  along with Ariadne Neurosymbolic. If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "pybind11.hpp"
-#include "neuro_symbolic/neuro_symbolic.hpp"
-#include "neuro_symbolic/validated.hpp"
+#include "neurosymbolic/neurosymbolic.hpp"
+#include "neurosymbolic/validated.hpp"
 
 #include <vector>
 
 using namespace Ariadne;
 
 void neurosymbolic_submodule(pybind11::module& module) {
-    module.def("neuro_symbolic_version", &neuro_symbolic_version);
+    module.def("neurosymbolic_version", &neurosymbolic_version);
 
-    pybind11::class_<NeuralValidatedInterval>(module, "NeuralValidatedInterval")
+    pybind11::class_<NeurosymbolicValidatedInterval>(module, "NeurosymbolicValidatedInterval")
         .def(pybind11::init([](double lower, double upper) {
-            return NeuralValidatedInterval{lower,upper};
+            return NeurosymbolicValidatedInterval{lower,upper};
         }), pybind11::arg("lower"),pybind11::arg("upper"))
-        .def_readonly("lower",&NeuralValidatedInterval::lower)
-        .def_readonly("upper",&NeuralValidatedInterval::upper);
+        .def_readonly("lower",&NeurosymbolicValidatedInterval::lower)
+        .def_readonly("upper",&NeurosymbolicValidatedInterval::upper);
 
-    pybind11::class_<NeuralValidatedEvaluator>(module, "NeuralValidatedEvaluator")
+    pybind11::class_<NeurosymbolicValidatedEvaluator>(module, "NeurosymbolicValidatedEvaluator")
         .def(pybind11::init<NeuralParameterSnapshot>(),pybind11::arg("snapshot"))
-        .def("bounds",&NeuralValidatedEvaluator::bounds,pybind11::arg("input_box"));
+        .def("bounds",&NeurosymbolicValidatedEvaluator::bounds,pybind11::arg("input_box"));
 
-    module.def("neuro_symbolic_validated_bounds",
-        &neuro_symbolic_validated_bounds,
+    module.def("neurosymbolic_validated_bounds",
+        &neurosymbolic_validated_bounds,
         pybind11::arg("snapshot"),pybind11::arg("input_box"));
 
     // Symbolic expressions and derivatives are already exposed via

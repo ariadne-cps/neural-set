@@ -6,39 +6,39 @@
  ****************************************************************************/
 
 /*
- *  This file is part of Ariadne Neuro-Symbolic.
+ *  This file is part of Ariadne Neurosymbolic.
  *
- *  Ariadne Neuro-Symbolic is free software: you can redistribute it and/or
+ *  Ariadne Neurosymbolic is free software: you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License as published
  *  by the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  Ariadne Neuro-Symbolic is distributed in the hope that it will be useful,
+ *  Ariadne Neurosymbolic is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with Ariadne Neuro-Symbolic. If not, see <https://www.gnu.org/licenses/>.
+ *  along with Ariadne Neurosymbolic. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "ariadne-neuro-symbolic.hpp"
+#include "ariadne-neurosymbolic.hpp"
 #include "ariadne-testing.hpp"
 
 #include <string_view>
 
-class TestNeuroSymbolicUmbrella : public Ariadne::Testing::ContextFixture {
+class TestNeurosymbolicUmbrella : public Ariadne::Testing::ContextFixture {
 public:
     using ContextFixture::ContextFixture;
     void test_public_header() {
         ARIADNE_TESTING_EXPECT_EQUAL(
-            std::string_view(Ariadne::neuro_symbolic_version()),
+            std::string_view(Ariadne::neurosymbolic_version()),
             std::string_view("0.1.0"));
     }
 };
 
 int main(int argc, char** argv) {
-    ARIADNE_TESTING_SUITE("neuro-symbolic umbrella");
-    ARIADNE_TESTING_ADD_TEST(TestNeuroSymbolicUmbrella,test_public_header);
+    ARIADNE_TESTING_SUITE("neurosymbolic umbrella");
+    ARIADNE_TESTING_ADD_TEST(TestNeurosymbolicUmbrella,test_public_header);
     return ARIADNE_TESTING_RUN_TESTS_WITH_ARGS(argc,argv);
 }
