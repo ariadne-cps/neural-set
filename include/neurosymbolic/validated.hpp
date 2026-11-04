@@ -25,6 +25,8 @@
 /** @file neurosymbolic/validated.hpp
  *  @brief Rigorous interval output enclosures of frozen neural networks.
  *
+ *  The input is Ariadne's existing FloatDPExactBox (a Box of exact
+ *  intervals); the result is FloatDPUpperBox, its validated enclosure.
  *  All weights and inputs represent their exact binary64 real values.
  *  Unlike Neural's NativeCpu backend, this evaluator uses Ariadne Numeric's
  *  outwardly rounded FloatDPBounds operations without approximate fallbacks.
@@ -33,16 +35,9 @@
 #define ARIADNE_NEUROSYMBOLIC_VALIDATED_HPP
 
 #include "neural/network.hpp"
-
-#include <vector>
+#include "geometry/box.hpp"
 
 namespace Ariadne {
-
-/** @brief A closed interval with exact binary64 endpoints. */
-struct NeurosymbolicValidatedInterval {
-    double lower;
-    double upper;
-};
 
 /** @brief Validated interval-bound propagation of a frozen dense network.
  *
@@ -64,17 +59,16 @@ public:
      *  reversed input endpoints.
      *  @throws std::overflow_error for nonfinite intermediate enclosures.
      */
-    std::vector<NeurosymbolicValidatedInterval> bounds(
-        std::vector<NeurosymbolicValidatedInterval> const& input_box) const;
+    FloatDPUpperBox bounds(FloatDPExactBox const& input_box) const;
 
 private:
     NeuralParameterSnapshot snapshot_;
 };
 
 /** @brief Convenience wrapper for one validated evaluation. */
-std::vector<NeurosymbolicValidatedInterval> neurosymbolic_validated_bounds(
+FloatDPUpperBox neurosymbolic_validated_bounds(
     NeuralParameterSnapshot const& snapshot,
-    std::vector<NeurosymbolicValidatedInterval> const& input_box);
+    FloatDPExactBox const& input_box);
 
 } // namespace Ariadne
 

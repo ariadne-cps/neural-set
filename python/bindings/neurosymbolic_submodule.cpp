@@ -33,13 +33,6 @@ using namespace Ariadne;
 void neurosymbolic_submodule(pybind11::module& module) {
     module.def("neurosymbolic_version", &neurosymbolic_version);
 
-    pybind11::class_<NeurosymbolicValidatedInterval>(module, "NeurosymbolicValidatedInterval")
-        .def(pybind11::init([](double lower, double upper) {
-            return NeurosymbolicValidatedInterval{lower,upper};
-        }), pybind11::arg("lower"),pybind11::arg("upper"))
-        .def_readonly("lower",&NeurosymbolicValidatedInterval::lower)
-        .def_readonly("upper",&NeurosymbolicValidatedInterval::upper);
-
     pybind11::class_<NeurosymbolicValidatedEvaluator>(module, "NeurosymbolicValidatedEvaluator")
         .def(pybind11::init<NeuralParameterSnapshot>(),pybind11::arg("snapshot"))
         .def("bounds",&NeurosymbolicValidatedEvaluator::bounds,pybind11::arg("input_box"));

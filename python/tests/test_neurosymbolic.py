@@ -31,12 +31,27 @@ from pyariadne import (
     NeuralDenseLayerSpec,
     NeuralNetwork,
     NeuralParameterSnapshot,
-    NeurosymbolicValidatedInterval,
+    FloatDPExactBox,
+    FloatDPExactInterval,
+    FloatDP,
+    DoublePrecision,
     NeurosymbolicValidatedEvaluator,
     neurosymbolic_validated_bounds,
     neurosymbolic_version,
     NeuralExecutionSession,
 )
+
+
+def box(*pairs):
+    dp = DoublePrecision()
+    return FloatDPExactBox([
+        FloatDPExactInterval(FloatDP(left, dp), FloatDP(right, dp))
+        for left, right in pairs
+    ])
+
+
+def endpoints(interval):
+    return float(interval.lower_bound().raw().get_d()), float(interval.upper_bound().raw().get_d())
 
 
 def model(activation):
@@ -55,13 +70,12 @@ def test_exact_affine_corner_oracle():
         NeuralNetwork(2, [NeuralDenseLayerSpec(1, NeuralActivation.Identity)]),
         [2, -3, 0.5],
     )
-    result = NeurosymbolicValidatedEvaluator(snap).bounds([
-        NeurosymbolicValidatedInterval(-1, 2),
-        NeurosymbolicValidatedInterval(4, 5),
-    ])
-    assert len(result) == 1
-    assert -17 < result[0].lower <= -16.5
-    assert -7.5 <= result[0].upper < -7
+    result = NeurosymbolicValidatedEvaluator(snap).bounds(
+        box((-1, 2), (4, 5)))
+    assert result.dimension() == 1
+    low, high = endpoints(result[0])
+    assert -17 < low <= -16.5
+    assert -7.5 <= high < -7
 
 
 @pytest.mark.parametrize("activation", [
@@ -74,19 +88,19 @@ def test_exact_affine_corner_oracle():
 def test_all_activations_contain_points(activation):
     snap = model(activation)
     bounds = neurosymbolic_validated_bounds(
-        snap, [NeurosymbolicValidatedInterval(-3, 4)])[0]
+        snap, box((-3, 4)))[0]
     cpu = NeuralExecutionSession(snap)
-    assert math.isfinite(bounds.lower)
-    assert math.isfinite(bounds.upper)
+    low, high = endpoints(bounds)
+    assert math.isfinite(low)
+    assert math.isfinite(high)
     for x in (-3, -2, -1, 0, 1, 2, 3, 4):
         y = cpu.infer([x])[0]
         # Sampling is falsification support, not a proof of enclosure.
-        assert bounds.lower <= y <= bounds.upper
+        assert low <= y <= high
 
 
 def test_bad_input_box():
     snap = model(NeuralActivation.Identity)
-    for bad in ([], [NeurosymbolicValidatedInterval(2, 1)],
-                [NeurosymbolicValidatedInterval(0, math.inf)]):
+    for bad in (box(), box((2, 1))):
         with pytest.raises(ValueError):
             neurosymbolic_validated_bounds(snap, bad)

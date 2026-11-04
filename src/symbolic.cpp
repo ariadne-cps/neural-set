@@ -44,10 +44,8 @@ RealExpression activate(RealExpression value, NeuralActivation activation) {
         case NeuralActivation::Identity: return value;
         case NeuralActivation::Relu: return max(value, RealExpression(0));
         case NeuralActivation::Tanh: return tanh(value);
-        case NeuralActivation::Sigmoid:
-            return RealExpression(1) / (RealExpression(1) + exp(-value));
-        case NeuralActivation::Softplus:
-            return log(RealExpression(1) + exp(value));
+        case NeuralActivation::Sigmoid: return sigmoid(value);
+        case NeuralActivation::Softplus: return softplus(value);
         default: throw std::invalid_argument("Unsupported neural activation");
     }
 }

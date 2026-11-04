@@ -26,12 +26,18 @@ dependencies are added to Neural.
 
 ```cpp
 NeurosymbolicValidatedEvaluator evaluator(snapshot);
-auto result = evaluator.bounds({{-1.0, 1.0}});
+FloatDPExactBox domain({
+    FloatDPExactInterval(FloatDP(-1.0), FloatDP(1.0))
+});
+FloatDPUpperBox result = evaluator.bounds(domain);
 ```
 
-Uses Ariadne `FloatDPBounds` with outward-rounded affine operations and
-validated activation enclosures for identity, ReLU, tanh, sigmoid and
-softplus. The stored IEEE-754 binary64 weights and biases are converted
+The API accepts existing `FloatDPExactBox` and returns existing
+`FloatDPUpperBox`; both use the `Interval` and `Box` types
+from Ariadne Interval/Geometry, without repository-specific interval or box
+wrappers. Internally it uses Numeric's `FloatDPBounds` and invokes Numeric's
+existing outward-rounded `tanh`, `sigmoid`, and `softplus` operations
+directly (plus `max` for ReLU). The stored IEEE-754 binary64 weights and biases are converted
 to *exact mathematical constants*, never reinterpreted as decimal source
 literals. Intermediate infinities are rejected. The result is a
 mathematical inclusion, not a guarantee of tightness or of the exact
@@ -45,8 +51,11 @@ auto expressions = neurosymbolic_expand(snapshot, {x});
 auto derivative = Ariadne::derivative(expressions.at(0), x);
 ```
 
-Supports every current dense activation. ReLU becomes `max(0,x)`,
-sigmoid becomes `1/(1+exp(-x))`, and softplus becomes `log(1+exp(x))`.
+Symbolic expansion supports Identity, ReLU, Tanh, Sigmoid and Softplus.
+The two newer operations are provided directly by Symbolic as
+`Expression<Real>` compositions of existing elementary operators, with
+equivalent C++/Python tests in Symbolic. Numeric's existing correctly
+rounded implementations are reused in the validated interval evaluator.
 Analytic derivatives at activation kinks are not silently assumed;
 expression DAGs may grow substantially. Symbolic expansion is currently a
 C++ API; Python initially exposes the validated evaluator and existing

@@ -24,6 +24,7 @@
 
 #include "neurosymbolic/validated.hpp"
 #include "numeric/floats.hpp"
+#include "interval/interval.hpp"
 
 #include <cmath>
 #include <stdexcept>
@@ -69,19 +70,22 @@ NeuralParameterSnapshot const& NeurosymbolicValidatedEvaluator::snapshot() const
     return snapshot_;
 }
 
-std::vector<NeurosymbolicValidatedInterval> NeurosymbolicValidatedEvaluator::bounds(
-    std::vector<NeurosymbolicValidatedInterval> const& input_box) const {
+FloatDPUpperBox NeurosymbolicValidatedEvaluator::bounds(
+    FloatDPExactBox const& input_box) const {
     auto const& network = snapshot_.network();
-    if (input_box.size() != network.input_dimension())
+    if (input_box.dimension() != network.input_dimension())
         throw std::invalid_argument("Wrong number of validated neural inputs");
 
     std::vector<BoundsType> state;
-    state.reserve(input_box.size());
-    for (auto const& x : input_box) {
-        if (!std::isfinite(x.lower) || !std::isfinite(x.upper) ||
-            x.lower > x.upper)
+    state.reserve(input_box.dimension());
+    for (std::size_t i = 0u; i < input_box.dimension(); ++i) {
+        auto const& interval=input_box[i];
+        auto const lower=interval.lower_bound();
+        auto const upper=interval.upper_bound();
+        if (!std::isfinite(lower.get_d()) || !std::isfinite(upper.get_d()) ||
+            lower.get_d() > upper.get_d())
             throw std::invalid_argument("Invalid validated input interval");
-        state.emplace_back(FloatDP(x.lower), FloatDP(x.upper));
+        state.emplace_back(lower, upper);
     }
 
     auto const& values = snapshot_.values();
@@ -98,17 +102,15 @@ std::vector<NeurosymbolicValidatedInterval> NeurosymbolicValidatedEvaluator::bou
         }
         state.swap(output);
     }
-    std::vector<NeurosymbolicValidatedInterval> result;
-    result.reserve(state.size());
-    for (auto const& value : state)
-        result.push_back({value.lower_raw().get_d(),
-                          value.upper_raw().get_d()});
+    FloatDPUpperBox result(state.size());
+    for (std::size_t i = 0u; i < state.size(); ++i)
+        result[i]=make_interval(state[i]);
     return result;
 }
 
-std::vector<NeurosymbolicValidatedInterval> neurosymbolic_validated_bounds(
+FloatDPUpperBox neurosymbolic_validated_bounds(
     NeuralParameterSnapshot const& snapshot,
-    std::vector<NeurosymbolicValidatedInterval> const& input_box) {
+    FloatDPExactBox const& input_box) {
     return NeurosymbolicValidatedEvaluator(snapshot).bounds(input_box);
 }
 

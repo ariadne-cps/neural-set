@@ -31,10 +31,11 @@ int main() {
     using namespace Ariadne;
     NeuralNetwork model(1,{{1,NeuralActivation::Tanh}});
     NeuralParameterSnapshot snapshot(model,{2.0,0.0});
-    auto const enclosure=NeurosymbolicValidatedEvaluator(snapshot).bounds({{-1.0,1.0}});
+    auto const enclosure=NeurosymbolicValidatedEvaluator(snapshot).bounds(
+        FloatDPExactBox({FloatDPExactInterval(FloatDP(-1.0),FloatDP(1.0))}));
     std::cout << "Neurosymbolic " << neurosymbolic_version() << '\n';
-    std::cout << "Validated output: [" << enclosure.at(0).lower
-              << ", " << enclosure.at(0).upper << "]\n";
+    std::cout << "Validated output: [" << enclosure[0].lower_bound()
+              << ", " << enclosure[0].upper_bound() << "]\n";
     RealVariable x("x");
     auto const expressions=neurosymbolic_expand(snapshot,{x});
     std::cout << "Expanded expressions: " << expressions.size() << '\n';

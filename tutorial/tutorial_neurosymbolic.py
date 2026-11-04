@@ -26,14 +26,19 @@ from pyariadne import (
     NeuralNetwork,
     NeuralParameterSnapshot,
     NeurosymbolicValidatedEvaluator,
-    NeurosymbolicValidatedInterval,
+    FloatDPExactBox,
+    FloatDPExactInterval,
+    FloatDP,
+    DoublePrecision,
     neurosymbolic_version,
 )
 
 model = NeuralNetwork(1, [
     NeuralDenseLayerSpec(1, NeuralActivation.Tanh)])
 snapshot = NeuralParameterSnapshot(model, [2.0, 0.0])
-enclosure = NeurosymbolicValidatedEvaluator(snapshot).bounds([
-    NeurosymbolicValidatedInterval(-1.0, 1.0)])
+dp = DoublePrecision()
+input_box = FloatDPExactBox([
+    FloatDPExactInterval(FloatDP(-1, dp), FloatDP(1, dp))])
+enclosure = NeurosymbolicValidatedEvaluator(snapshot).bounds(input_box)
 print("Neurosymbolic", neurosymbolic_version())
-print("Validated output:", enclosure[0].lower, enclosure[0].upper)
+print("Validated output:", enclosure[0].lower_bound(), enclosure[0].upper_bound())

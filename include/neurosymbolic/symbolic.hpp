@@ -38,8 +38,11 @@ namespace Ariadne {
 /** @brief Symbolically expand a frozen neural network.
  *
  *  Each binary64 parameter is embedded as its exact dyadic Real value,
- *  and every layer becomes an Expression<Real> DAG. ReLU is represented by
- *  max(0,x), sigmoid by 1/(1+exp(-x)), softplus by log(1+exp(x)).
+ *  and every supported layer becomes an Expression<Real> DAG.
+ *  Identity, ReLU, Tanh, Sigmoid and Softplus use Symbolic operations.
+ *  Symbolic's sigmoid/softplus are expression-level compositions of
+ *  existing real elementary operators, not duplicated numeric kernels.
+ *  Validated numeric evaluation uses Numeric's existing implementations.
  *  This expansion preserves mathematical real-function semantics, NOT
  *  finite-precision CPU floating-point evaluation order. It may be large.
  *

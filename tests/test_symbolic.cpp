@@ -72,6 +72,19 @@ public:
             auto expressions=neurosymbolic_expand(model,{x});
             ARIADNE_TESTING_EXPECT_EQUAL(expressions.size(),std::size_t{1});
         }
+        for (auto activation : {NeuralActivation::Sigmoid,
+                                NeuralActivation::Softplus}) {
+            NeuralParameterSnapshot nonlinear(
+                NeuralNetwork(1,{{1,activation}}), {1.0,0.0});
+            auto const expressions = neurosymbolic_expand(nonlinear,{x});
+            auto const expected = activation == NeuralActivation::Sigmoid
+                ? sigmoid(RealExpression(x))
+                : softplus(RealExpression(x));
+            ARIADNE_TESTING_PROVE(identical(expressions.at(0), expected));
+            ARIADNE_TESTING_PROVE(identical(
+                simplify(derivative(expressions.at(0),x)),
+                simplify(derivative(expected,x))));
+        }
         NeuralParameterSnapshot smooth(
             NeuralNetwork(1,{{1,NeuralActivation::Tanh}}),
             {1.0,0.0});
