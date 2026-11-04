@@ -35,7 +35,12 @@ void neurosymbolic_submodule(pybind11::module& module) {
 
     pybind11::class_<NeurosymbolicValidatedEvaluator>(module, "NeurosymbolicValidatedEvaluator")
         .def(pybind11::init<NeuralParameterSnapshot>(),pybind11::arg("snapshot"))
-        .def("bounds",&NeurosymbolicValidatedEvaluator::bounds,pybind11::arg("input_box"));
+        .def("bounds",pybind11::overload_cast<FloatDPExactBox const&>(
+            &NeurosymbolicValidatedEvaluator::bounds,pybind11::const_),pybind11::arg("input_box"))
+        .def("bounds",pybind11::overload_cast<FloatDPBoundsVector const&>(
+            &NeurosymbolicValidatedEvaluator::bounds,pybind11::const_),pybind11::arg("input_bounds"))
+        .def("bounds",pybind11::overload_cast<FloatDPBallVector const&>(
+            &NeurosymbolicValidatedEvaluator::bounds,pybind11::const_),pybind11::arg("input_balls"));
 
     module.def("neurosymbolic_validated_bounds",
         &neurosymbolic_validated_bounds,

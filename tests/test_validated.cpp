@@ -88,6 +88,59 @@ public:
         }
     }
 
+    void test_ball_and_bounds_vectors() {
+        NeuralParameterSnapshot model(
+            NeuralNetwork(2,{{1,NeuralActivation::Identity}}),
+            {2.0,-3.0,0.5});
+        NeurosymbolicValidatedEvaluator evaluator(model);
+        FloatDPBoundsVector interval_input({
+            FloatDPBounds(ExactDouble(-1.0),ExactDouble(2.0),dp),
+            FloatDPBounds(ExactDouble(4.0),ExactDouble(5.0),dp)
+        });
+        FloatDPBallVector ball_input({
+            FloatDPBall(interval_input[0]),FloatDPBall(interval_input[1])
+        });
+        auto const from_bounds=evaluator.bounds(interval_input);
+        auto const from_balls=evaluator.bounds(ball_input);
+        ARIADNE_TESTING_EXPECT_EQUAL(from_bounds.size(),SizeType{1});
+        ARIADNE_TESTING_EXPECT_EQUAL(from_balls.size(),SizeType{1});
+        ARIADNE_TESTING_PROVE(from_bounds[0].lower_raw().get_d()<=-16.5);
+        ARIADNE_TESTING_PROVE(from_bounds[0].upper_raw().get_d()>=-7.5);
+        ARIADNE_TESTING_PROVE(from_balls[0].lower_raw().get_d()<=-16.5);
+        ARIADNE_TESTING_PROVE(from_balls[0].upper_raw().get_d()>=-7.5);
+        // A ball's radius must be included, not discarded.
+        ARIADNE_TESTING_PROVE(from_balls[0].lower_raw().get_d()
+                             <=from_bounds[0].lower_raw().get_d());
+        ARIADNE_TESTING_PROVE(from_balls[0].upper_raw().get_d()
+                             >=from_bounds[0].upper_raw().get_d());
+
+        for (auto activation : {NeuralActivation::Identity,NeuralActivation::Relu,
+                                NeuralActivation::Tanh,NeuralActivation::Sigmoid,
+                                NeuralActivation::Softplus}) {
+            NeuralParameterSnapshot one(
+                NeuralNetwork(1,{{1,activation}}),{1.25,-0.5});
+            NeurosymbolicValidatedEvaluator one_evaluator(one);
+            FloatDPBoundsVector bounds_input({
+                FloatDPBounds(ExactDouble(-3.0),ExactDouble(4.0),dp)
+            });
+            FloatDPBallVector balls_input({FloatDPBall(bounds_input[0])});
+            auto const bounded=one_evaluator.bounds(bounds_input);
+            auto const balled=one_evaluator.bounds(balls_input);
+            NeuralExecutionSession cpu(one);
+            for (double x : {-3.0,-1.0,0.0,1.0,4.0}) {
+                double y=cpu.infer({x}).at(0);
+                ARIADNE_TESTING_PROVE(bounded[0].lower_raw().get_d()<=y);
+                ARIADNE_TESTING_PROVE(bounded[0].upper_raw().get_d()>=y);
+                ARIADNE_TESTING_PROVE(balled[0].lower_raw().get_d()<=y);
+                ARIADNE_TESTING_PROVE(balled[0].upper_raw().get_d()>=y);
+            }
+        }
+        ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
+            (void)evaluator.bounds(FloatDPBoundsVector()));
+        ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
+            (void)evaluator.bounds(FloatDPBallVector()));
+    }
+
     void test_composed_network_and_invalid_boxes() {
         NeuralParameterSnapshot model(
             NeuralNetwork(2,{{2,NeuralActivation::Relu},
@@ -128,5 +181,6 @@ int main(int argc,char** argv) {
     ARIADNE_TESTING_ADD_TEST(TestValidated,test_affine_oracle_and_backend_isolation);
     ARIADNE_TESTING_ADD_TEST(TestValidated,test_activations_and_sampled_inclusion);
     ARIADNE_TESTING_ADD_TEST(TestValidated,test_composed_network_and_invalid_boxes);
+    ARIADNE_TESTING_ADD_TEST(TestValidated,test_ball_and_bounds_vectors);
     return ARIADNE_TESTING_RUN_TESTS_WITH_ARGS(argc,argv);
 }

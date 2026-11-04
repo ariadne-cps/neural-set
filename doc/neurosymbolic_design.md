@@ -25,8 +25,11 @@ such as `0.1` represents the binary64 value, not exact decimal 1/10.
 The reference mathematical map is a composition of dense affine layers
 followed by identity, ReLU, tanh, sigmoid, or softplus activations.
 Interval bound propagation uses Numeric's `FloatDPBounds` for all affine
-terms and monotone validated elementary activations. Public APIs use the existing
-`FloatDPExactBox` for input and `FloatDPUpperBox` for output, which
+terms and monotone validated elementary activations. Native `FloatDPBoundsVector`
+and `FloatDPBallVector` inputs return `FloatDPBoundsVector`. A ball's complete
+radius is enclosed through Numeric's directed-rounded conversion before
+propagation. The existing `FloatDPExactBox` input and `FloatDPUpperBox`
+output remain available, which
 are composed from Ariadne's `Interval` and `Box` abstractions.
 There is no custom interval or box. Existing `FloatDPBounds` operations
 perform the arithmetic and Numeric's `tanh`, `sigmoid` and `softplus`
@@ -102,6 +105,7 @@ model serialization; it consumes Neural's current snapshot contract.
 
 | Date (UTC) | Milestone | Status | Changes, evidence, limitations |
 | --- | --- | --- | --- |
+| 2026-11-04 | N1 native ball and bounds propagation | Source, tests and Python bindings committed; CI pending | Added FloatDPBoundsVector and FloatDPBallVector overloads reusing the same FloatDPBounds propagation as the original FloatDPExactBox path. Ball conversion encloses the full radius. No custom interval types or solver calls. |
 | 2026-11-04 | Adopt Expression Set as the mathematical dependency | Implemented in source; CI pending | Replaced the direct Symbolic gitlink with Expression Set, which carries Symbolic and Set (with Linear Programming, Constraint Solving, and Nonlinear Programming transitively). Updated CMake dependency consistency checks, Python binding linkage, documentation and the build graph. No new mathematical types. |
 | 2026-11-04 | Repair existing validated Numeric API usage | Implemented in source; CI pending | Removed the conflicting local BoundsType alias and used FloatDPBounds directly. Constructed binary64 singleton intervals with ExactDouble and dp; changed C++ tests and tutorial to use the public FloatDP(ExactDouble(value),dp) constructor. |
 | 2026-11-04 | Pin Symbolic activation evaluation test correction | Implemented; CI pending | Updated ss/sym to symbolic d17d699a, correcting a test that compared Real expression trees structurally instead of checking rigorous numeric enclosure of evaluated sigmoid(0) and softplus(0). The mathematical APIs and symbolic activation support are unchanged. |\n| 2026-11-04 | Restore all five symbolic neural activations | Implemented; CI pending | Pinned ss/sym to Symbolic commit 7115fe33, which exposes sigmoid and softplus Expression<Real> functions with equivalent C++ and Python tests. Neurosymbolic now invokes the Symbolic operations directly, supports all five activation types and checks the two expansions and their derivatives against Symbolic reference expressions. |

@@ -36,8 +36,18 @@ FloatDPExactBox domain({
 FloatDPUpperBox result = evaluator.bounds(domain);
 ```
 
-The API accepts existing `FloatDPExactBox` and returns existing
-`FloatDPUpperBox`; both use the `Interval` and `Box` types
+The evaluator also accepts `FloatDPBoundsVector` and `FloatDPBallVector`,
+both returning `FloatDPBoundsVector`. Ball radii are rigorously enclosed,
+and all three APIs reuse the same outward-rounded layer evaluator:
+
+```cpp
+FloatDPBoundsVector intervals({FloatDPBounds(ExactDouble(-1.0),ExactDouble(1.0),dp)});
+FloatDPBallVector balls({FloatDPBall(intervals[0])});
+auto interval_outputs = evaluator.bounds(intervals);
+auto ball_outputs = evaluator.bounds(balls);
+```
+
+The existing API accepts `FloatDPExactBox` and returns `FloatDPUpperBox`; both use the `Interval` and `Box` types
 from Ariadne Interval/Geometry, without repository-specific interval or box
 wrappers. Internally it uses Numeric's `FloatDPBounds` and invokes Numeric's
 existing outward-rounded `tanh`, `sigmoid`, and `softplus` operations

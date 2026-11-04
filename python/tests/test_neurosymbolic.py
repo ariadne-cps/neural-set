@@ -34,6 +34,10 @@ from pyariadne import (
     FloatDPExactBox,
     FloatDPExactInterval,
     FloatDP,
+    FloatDPBounds,
+    FloatDPBall,
+    FloatDPBoundsVector,
+    FloatDPBallVector,
     DoublePrecision,
     NeurosymbolicValidatedEvaluator,
     neurosymbolic_validated_bounds,
@@ -104,3 +108,18 @@ def test_bad_input_box():
     for bad in (box(), box((2, 1))):
         with pytest.raises(ValueError):
             neurosymbolic_validated_bounds(snap, bad)
+
+
+def test_bounds_and_ball_vector_inputs():
+    snap = model(NeuralActivation.Identity)
+    evaluator = NeurosymbolicValidatedEvaluator(snap)
+    dp = DoublePrecision()
+    interval = FloatDPBounds(FloatDP(-2, dp), FloatDP(3, dp))
+    bounds = evaluator.bounds(FloatDPBoundsVector([interval]))
+    balls = evaluator.bounds(FloatDPBallVector([FloatDPBall(interval)]))
+    assert len(bounds) == 1
+    assert len(balls) == 1
+    assert bounds[0].lower().raw().get_d() <= -3.0
+    assert bounds[0].upper().raw().get_d() >= 3.25
+    assert balls[0].lower().raw().get_d() <= bounds[0].lower().raw().get_d()
+    assert balls[0].upper().raw().get_d() >= bounds[0].upper().raw().get_d()
