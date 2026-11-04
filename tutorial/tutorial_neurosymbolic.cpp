@@ -24,6 +24,8 @@
 
 #include "ariadne-neurosymbolic.hpp"
 #include "numeric/real.hpp"
+#include "numeric/builtin.hpp"
+#include "numeric/floats.hpp"
 
 #include <iostream>
 
@@ -32,7 +34,7 @@ int main() {
     NeuralNetwork model(1,{{1,NeuralActivation::Tanh}});
     NeuralParameterSnapshot snapshot(model,{2.0,0.0});
     auto const enclosure=NeurosymbolicValidatedEvaluator(snapshot).bounds(
-        FloatDPExactBox({FloatDPExactInterval(FloatDP(-1.0),FloatDP(1.0))}));
+        FloatDPExactBox({FloatDPExactInterval(FloatDP(ExactDouble(-1.0),dp),FloatDP(ExactDouble(1.0),dp))}));
     std::cout << "Neurosymbolic " << neurosymbolic_version() << '\n';
     std::cout << "Validated output: [" << enclosure[0].lower_bound()
               << ", " << enclosure[0].upper_bound() << "]\n";

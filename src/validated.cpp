@@ -24,6 +24,7 @@
 
 #include "neurosymbolic/validated.hpp"
 #include "numeric/floats.hpp"
+#include "numeric/builtin.hpp"
 #include "interval/interval.hpp"
 
 #include <cmath>
@@ -34,15 +35,12 @@
 namespace Ariadne {
 namespace {
 
-using BoundsType = FloatDPBounds;
-
-BoundsType exact(double value) {
-    // A FloatDP initialized from double copies its exact IEEE binary64
-    // value: no decimal conversion or rounding of parameters is involved.
-    return BoundsType(FloatDP(value));
+FloatDPBounds exact(double value) {
+    // Preserve the exact binary64 parameter as a singleton enclosure.
+    return FloatDPBounds(ExactDouble(value),dp);
 }
 
-BoundsType checked(BoundsType value) {
+FloatDPBounds checked(FloatDPBounds value) {
     if (!std::isfinite(value.lower_raw().get_d()) ||
         !std::isfinite(value.upper_raw().get_d()) ||
         value.lower_raw().get_d() > value.upper_raw().get_d())
@@ -50,7 +48,7 @@ BoundsType checked(BoundsType value) {
     return value;
 }
 
-BoundsType activate(BoundsType const& interval, NeuralActivation activation) {
+FloatDPBounds activate(FloatDPBounds const& interval, NeuralActivation activation) {
     switch (activation) {
         case NeuralActivation::Identity:  return interval;
         case NeuralActivation::Relu:      return max(interval, exact(0.0));
@@ -76,7 +74,7 @@ FloatDPUpperBox NeurosymbolicValidatedEvaluator::bounds(
     if (input_box.dimension() != network.input_dimension())
         throw std::invalid_argument("Wrong number of validated neural inputs");
 
-    std::vector<BoundsType> state;
+    std::vector<FloatDPBounds> state;
     state.reserve(input_box.dimension());
     for (std::size_t i = 0u; i < input_box.dimension(); ++i) {
         auto const& interval=input_box[i];
@@ -90,7 +88,7 @@ FloatDPUpperBox NeurosymbolicValidatedEvaluator::bounds(
 
     auto const& values = snapshot_.values();
     for (auto const& layer : network.layers()) {
-        std::vector<BoundsType> output;
+        std::vector<FloatDPBounds> output;
         output.reserve(layer.outputs);
         for (std::size_t o=0; o<layer.outputs; ++o) {
             auto sum=exact(values[layer.biases_offset+o]);

@@ -23,6 +23,8 @@
  */
 
 #include "ariadne-neurosymbolic.hpp"
+#include "numeric/builtin.hpp"
+#include "numeric/floats.hpp"
 #include "neural/backend.hpp"
 #include "ariadne-testing.hpp"
 
@@ -40,7 +42,7 @@ public:
         NeuralParameterSnapshot model(
             NeuralNetwork(2,{{1,NeuralActivation::Identity}}),
             {2.0,-3.0,0.5});
-        auto const bounds=NeurosymbolicValidatedEvaluator(model).bounds(FloatDPExactBox({FloatDPExactInterval(FloatDP(-1.0),FloatDP(2.0)), FloatDPExactInterval(FloatDP(4.0),FloatDP(5.0))}));
+        auto const bounds=NeurosymbolicValidatedEvaluator(model).bounds(FloatDPExactBox({FloatDPExactInterval(FloatDP(ExactDouble(-1.0),dp),FloatDP(ExactDouble(2.0),dp)), FloatDPExactInterval(FloatDP(ExactDouble(4.0),dp),FloatDP(ExactDouble(5.0),dp))}));
         ARIADNE_TESTING_EXPECT_EQUAL(bounds.dimension(),std::size_t{1});
         ARIADNE_TESTING_PROVE(bounds[0].lower_bound().raw().get_d()<=-16.5);
         ARIADNE_TESTING_PROVE(bounds[0].upper_bound().raw().get_d()>=-7.5);
@@ -62,7 +64,7 @@ public:
             NeuralParameterSnapshot model(
                 NeuralNetwork(1,{{1,activation}}),
                 {1.25,-0.5});
-            auto const bounds=neurosymbolic_validated_bounds(model,FloatDPExactBox({FloatDPExactInterval(FloatDP(-3.0),FloatDP(4.0))}));
+            auto const bounds=neurosymbolic_validated_bounds(model,FloatDPExactBox({FloatDPExactInterval(FloatDP(ExactDouble(-3.0),dp),FloatDP(ExactDouble(4.0),dp))}));
             ARIADNE_TESTING_EXPECT_EQUAL(bounds.dimension(),std::size_t{1});
             ARIADNE_TESTING_PROVE(bounds[0].lower_bound().raw().get_d()<=bounds[0].upper_bound().raw().get_d());
             NeuralExecutionSession cpu(model);
@@ -92,7 +94,7 @@ public:
                              {1,NeuralActivation::Identity}}),
             {1.0,-1.0,-1.0,1.0,0.0,0.0,1.0,1.0,0.0});
         auto const bounds=neurosymbolic_validated_bounds(
-            model,FloatDPExactBox({FloatDPExactInterval(FloatDP(1.0),FloatDP(3.0)),FloatDPExactInterval(FloatDP(0.0),FloatDP(2.0))}));
+            model,FloatDPExactBox({FloatDPExactInterval(FloatDP(ExactDouble(1.0),dp),FloatDP(ExactDouble(3.0),dp)),FloatDPExactInterval(FloatDP(ExactDouble(0.0),dp),FloatDP(ExactDouble(2.0),dp))}));
         ARIADNE_TESTING_EXPECT_EQUAL(bounds.dimension(),std::size_t{1});
         NeuralExecutionSession cpu(model);
         for (int i=0;i<=20;++i)
@@ -105,19 +107,19 @@ public:
             }
 
         ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
-            (void)neurosymbolic_validated_bounds(model,FloatDPExactBox({FloatDPExactInterval(FloatDP(0.0),FloatDP(1.0))})));
+            (void)neurosymbolic_validated_bounds(model,FloatDPExactBox({FloatDPExactInterval(FloatDP(ExactDouble(0.0),dp),FloatDP(ExactDouble(1.0),dp))})));
         ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
-            (void)neurosymbolic_validated_bounds(model,FloatDPExactBox({FloatDPExactInterval(FloatDP(2.0),FloatDP(1.0)),FloatDPExactInterval(FloatDP(0.0),FloatDP(1.0))})));
+            (void)neurosymbolic_validated_bounds(model,FloatDPExactBox({FloatDPExactInterval(FloatDP(ExactDouble(2.0),dp),FloatDP(ExactDouble(1.0),dp)),FloatDPExactInterval(FloatDP(ExactDouble(0.0),dp),FloatDP(ExactDouble(1.0),dp))})));
         ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
-            (void)neurosymbolic_validated_bounds(model,FloatDPExactBox({FloatDPExactInterval(FloatDP(0.0),FloatDP(std::numeric_limits<double>::infinity())),FloatDPExactInterval(FloatDP(0.0),FloatDP(1.0))})));
+            (void)neurosymbolic_validated_bounds(model,FloatDPExactBox({FloatDPExactInterval(FloatDP(ExactDouble(0.0),dp),FloatDP(ExactDouble(std::numeric_limits<double>::infinity()),dp)),FloatDPExactInterval(FloatDP(ExactDouble(0.0),dp),FloatDP(ExactDouble(1.0),dp))})));
         ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
-            (void)neurosymbolic_validated_bounds(model,FloatDPExactBox({FloatDPExactInterval(FloatDP(0.0),FloatDP(std::numeric_limits<double>::quiet_NaN())),FloatDPExactInterval(FloatDP(0.0),FloatDP(1.0))})));
+            (void)neurosymbolic_validated_bounds(model,FloatDPExactBox({FloatDPExactInterval(FloatDP(ExactDouble(0.0),dp),FloatDP(ExactDouble(std::numeric_limits<double>::quiet_NaN()),dp)),FloatDPExactInterval(FloatDP(ExactDouble(0.0),dp),FloatDP(ExactDouble(1.0),dp))})));
         NeuralParameterSnapshot overflow(
             NeuralNetwork(1,{{1,NeuralActivation::Identity}}),
             {1e308,0.0});
         ARIADNE_TESTING_EXPECT_THROWS(std::overflow_error,
             (void)neurosymbolic_validated_bounds(
-                overflow,FloatDPExactBox({FloatDPExactInterval(FloatDP(1e308),FloatDP(1e308))})));
+                overflow,FloatDPExactBox({FloatDPExactInterval(FloatDP(ExactDouble(1e308),dp),FloatDP(ExactDouble(1e308),dp))})));
     }
 };
 
