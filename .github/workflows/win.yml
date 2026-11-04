@@ -1,0 +1,99 @@
+name: Windows
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build-test:
+    name: ${{ matrix.config.name }} [${{ matrix.build_type }}]
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Release, Debug]
+        config:
+          - { name: "Windows 2025 x86 MSVC", os: windows-2025, arch: x64 }
+          - { name: "Windows 11 arm MSVC", os: windows-11-arm, arch: arm64 }
+
+    steps:
+      - name: Enable long paths in Git
+        shell: pwsh
+        run: git config --system core.longpaths true
+
+      - uses: actions/checkout@v7
+
+      - name: Set up MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1.13.0
+        with:
+          arch: ${{ matrix.config.arch }}
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install Python test dependencies
+        if: matrix.build_type == 'Debug'
+        run: python -m pip install pytest
+
+      # Compile with MSVC directly: sccache server startup timed out on Windows CI.
+      - name: Configure CMake
+        run: |
+          # /Z7 avoids concurrent compiler PDB writes in Debug.
+          cmake -S . -B build -G Ninja `
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
+            -DCMAKE_CXX_FLAGS_DEBUG="/Z7 /Ob0 /Od /RTC1" `
+            -DPYTHON_ENFORCE_TESTS=${{ matrix.build_type == 'Debug' && 'ON' || 'OFF' }} `
+            -DWARNINGS_AS_ERRORS=ON
+
+      - name: Build Release library and bindings
+        if: matrix.build_type == 'Release'
+        run: cmake --build build --parallel --target ariadne-neuro-symbolic bindings
+
+      - name: Install Release library
+        if: matrix.build_type == 'Release'
+        run: cmake --install build --prefix "${{ runner.workspace }}/install"
+
+      - name: Prepare C++ neurosymbolic tutorial
+        if: matrix.build_type == 'Release'
+        shell: pwsh
+        run: cmake -E copy_directory "$env:GITHUB_WORKSPACE/tutorial" "${{ runner.workspace }}/tutorial_neurosymbolic"
+
+      - name: Build and check C++ neurosymbolic tutorial
+        if: matrix.build_type == 'Release'
+        shell: pwsh
+        working-directory: ${{ runner.workspace }}/tutorial_neurosymbolic
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="${{ runner.workspace }}/install"
+          cmake --build build --parallel
+          $env:PATH = "${{ runner.workspace }}\install\bin;$env:PATH"
+          & ".\build\tutorial_neurosymbolic.exe"
+
+      - name: Check installed Python neurosymbolic tutorial
+        if: matrix.build_type == 'Release'
+        shell: pwsh
+        working-directory: ${{ github.workspace }}/tutorial
+        run: |
+          $env:PYTHONPATH = "${{ runner.workspace }}\install\Lib\site-packages"
+          $env:PATH = "${{ runner.workspace }}\install\bin;$env:PATH"
+          python -c "import os, pathlib, pyariadne; p=pathlib.Path(pyariadne.__file__).resolve(); root=pathlib.Path(os.environ['PYTHONPATH']).resolve(); assert p.is_relative_to(root), (p, root)"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tutorial_neurosymbolic.py
+
+      - name: Verify uninstallation
+        if: matrix.build_type == 'Release'
+        run: cmake --build build --target uninstall
+
+      - name: Build Debug tests and bindings
+        if: matrix.build_type == 'Debug'
+        run: cmake --build build --parallel --target tests
+
+      - name: Run Debug C++ tests
+        if: matrix.build_type == 'Debug'
+        run: ctest --test-dir build -j $env:NUMBER_OF_PROCESSORS -LE python --output-on-failure
+
+      - name: Run Debug Python tests
+        if: matrix.build_type == 'Debug'
+        run: ctest --test-dir build -L python --output-on-failure
