@@ -27,6 +27,7 @@
 #include "numeric/builtin.hpp"
 #include "numeric/real.hpp"
 
+#include <cmath>
 #include <stdexcept>
 #include <vector>
 
@@ -51,8 +52,13 @@ public:
         Map<Identifier,Real> point;
         point[x.name()]=Real(1);
         point[y.name()]=Real(2);
-        ARIADNE_TESTING_EXPECT_EQUAL(
-            evaluate(expr[0],point),Real(ExactDouble(-3.5)));
+        // Real evaluation is lazy: compare certified numerical bounds,
+        // not the syntax of an unevaluated Real arithmetic expression.
+        FloatDPBounds const value=evaluate(expr[0],point).get(dp);
+        ARIADNE_TESTING_PROVE(value.lower_raw().get_d()<=-3.5);
+        ARIADNE_TESTING_PROVE(value.upper_raw().get_d()>=-3.5);
+        ARIADNE_TESTING_PROVE(value.lower_raw().get_d()>-3.500000000001);
+        ARIADNE_TESTING_PROVE(value.upper_raw().get_d()<-3.499999999999);
         ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
             (void)neurosymbolic_expand(model,{x}));
         ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
@@ -69,30 +75,63 @@ public:
             NeuralParameterSnapshot model(
                 NeuralNetwork(1,{{1,activation}}),
                 {1.0,0.0});
-            auto expressions=neurosymbolic_expand(model,{x});
+            auto const expressions=neurosymbolic_expand(model,{x});
             ARIADNE_TESTING_EXPECT_EQUAL(expressions.size(),std::size_t{1});
+            ARIADNE_TESTING_PROVE(expressions[0].kind()!=OperatorKind::NULLARY);
+
+            // Independent expression-level reference without the affine layer.
+            // Algebraically 0 + 1*x is x, but 'identical' tests tree identity.
+            RealExpression expected(x);
+            switch (activation) {
+                case NeuralActivation::Identity: break;
+                case NeuralActivation::Relu: expected=max(expected,RealExpression(0)); break;
+                case NeuralActivation::Tanh: expected=tanh(expected); break;
+                case NeuralActivation::Sigmoid: expected=sigmoid(expected); break;
+                case NeuralActivation::Softplus: expected=softplus(expected); break;
+                default: throw std::invalid_argument("Unsupported test activation");
+            }
+
+            // Check semantic equivalence on both sides of the ReLU kink,
+            // including zero, using the rigorous Real-to-Bounds evaluation.
+            for (double input : {-2.0,-0.5,0.0,0.5,2.0}) {
+                Map<Identifier,Real> point;
+                point[x.name()]=Real(ExactDouble(input));
+                FloatDPBounds const actual=evaluate(expressions[0],point).get(dp);
+                FloatDPBounds const reference=evaluate(expected,point).get(dp);
+                ARIADNE_TESTING_PROVE(
+                    actual.lower_raw().get_d()<=reference.upper_raw().get_d());
+                ARIADNE_TESTING_PROVE(
+                    actual.upper_raw().get_d()>=reference.lower_raw().get_d());
+                ARIADNE_TESTING_PROVE(
+                    std::abs(actual.lower_raw().get_d()-reference.lower_raw().get_d())<1e-12);
+                ARIADNE_TESTING_PROVE(
+                    std::abs(actual.upper_raw().get_d()-reference.upper_raw().get_d())<1e-12);
+            }
+
+            // Differentiation remains tested for the two smooth activations;
+            // no derivative is assumed at the ReLU kink.
+            if (activation==NeuralActivation::Sigmoid ||
+                activation==NeuralActivation::Softplus) {
+                for (double input : {-2.0,-0.5,0.0,0.5,2.0}) {
+                    Map<Identifier,Real> point;
+                    point[x.name()]=Real(ExactDouble(input));
+                    FloatDPBounds const actual_derivative=
+                        evaluate(derivative(expressions[0],x),point).get(dp);
+                    FloatDPBounds const reference_derivative=
+                        evaluate(derivative(expected,x),point).get(dp);
+                    ARIADNE_TESTING_PROVE(std::abs(
+                        actual_derivative.lower_raw().get_d()-
+                        reference_derivative.lower_raw().get_d())<1e-12);
+                    ARIADNE_TESTING_PROVE(std::abs(
+                        actual_derivative.upper_raw().get_d()-
+                        reference_derivative.upper_raw().get_d())<1e-12);
+                }
+            }
         }
-        for (auto activation : {NeuralActivation::Sigmoid,
-                                NeuralActivation::Softplus}) {
-            NeuralParameterSnapshot nonlinear(
-                NeuralNetwork(1,{{1,activation}}), {1.0,0.0});
-            auto const expressions = neurosymbolic_expand(nonlinear,{x});
-            auto const expected = activation == NeuralActivation::Sigmoid
-                ? sigmoid(RealExpression(x))
-                : softplus(RealExpression(x));
-            ARIADNE_TESTING_PROVE(identical(expressions.at(0), expected));
-            ARIADNE_TESTING_PROVE(identical(
-                simplify(derivative(expressions.at(0),x)),
-                simplify(derivative(expected,x))));
-        }
-        NeuralParameterSnapshot smooth(
-            NeuralNetwork(1,{{1,NeuralActivation::Tanh}}),
-            {1.0,0.0});
-        auto const expr=neurosymbolic_expand(smooth,{x});
+
         ARIADNE_TESTING_PROVE(
             identical(simplify(derivative(tanh(RealExpression(x)),x)),
                       1-sqr(tanh(RealExpression(x)))));
-        ARIADNE_TESTING_PROVE(expr[0].kind()!=OperatorKind::NULLARY);
     }
 };
 
