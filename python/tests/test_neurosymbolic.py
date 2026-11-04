@@ -105,9 +105,19 @@ def test_all_activations_contain_points(activation):
 
 def test_bad_input_box():
     snap = model(NeuralActivation.Identity)
-    for bad in (box(), box((2, 1))):
-        with pytest.raises(ValueError):
-            neurosymbolic_validated_bounds(snap, bad)
+
+    # Construct a zero-dimensional box using the dimension constructor.
+    # A list-based FloatDPExactBox([]) cannot infer interval precision.
+    with pytest.raises(ValueError):
+        neurosymbolic_validated_bounds(snap, FloatDPExactBox(0))
+
+    # Wrong dimension must be rejected even for a valid, nonempty box.
+    with pytest.raises(ValueError):
+        neurosymbolic_validated_bounds(snap, box((0, 1), (0, 1)))
+
+    # The evaluator must reject reversed endpoints, not normalize them.
+    with pytest.raises(ValueError):
+        neurosymbolic_validated_bounds(snap, box((2, 1)))
 
 
 def test_bounds_and_ball_vector_inputs():
