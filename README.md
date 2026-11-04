@@ -1,7 +1,7 @@
 # Ariadne Neurosymbolic
 
-Mathematical integration of trained neural networks with Ariadne Symbolic,
-Function and validated Numeric facilities. This repository complements
+Mathematical integration of trained neural networks with Ariadne Expression Set,
+Symbolic, Function and validated Numeric/Set facilities. This repository complements
 [Neural](https://github.com/ariadne-cps/neural), which retains ownership of
 network topology, inference, differentiation, training and persistence.
 
@@ -11,13 +11,17 @@ network topology, inference, differentiation, training and persistence.
 neurosymbolic
   +-- neural                (frozen snapshots, training and CPU evaluation)
   |     +-- threading
-  +-- symbolic              (expression DAGs and differentiation)
-        +-- function        (mathematical function abstractions)
-              +-- geometry -> algebra -> interval -> numeric
+  +-- expression-set        (symbolic descriptions of sets)
+        +-- symbolic        (expressions and differentiation)
+        |     +-- function  (Taylor models and mathematical functions)
+        +-- set             (validated constrained images)
+              +-- linear-programming
+              +-- constraint-solving
+                    +-- nonlinear-programming
 ```
 
 The checked-in Git submodules pin dependency commits and enforce shared
-Configuration/Testing commits. No downstream Numeric/Function/Symbolic
+Configuration/Testing commits. No downstream Numeric/Function/Symbolic/Set
 dependencies are added to Neural.
 
 ## Implemented operations
@@ -27,7 +31,7 @@ dependencies are added to Neural.
 ```cpp
 NeurosymbolicValidatedEvaluator evaluator(snapshot);
 FloatDPExactBox domain({
-    FloatDPExactInterval(FloatDP(-1.0), FloatDP(1.0))
+    FloatDPExactInterval(FloatDP(ExactDouble(-1.0),dp), FloatDP(ExactDouble(1.0),dp))
 });
 FloatDPUpperBox result = evaluator.bounds(domain);
 ```
@@ -80,8 +84,11 @@ must be configured for the new repository.
 
 ## Scope and limitations
 
-- The validated evaluator does not implement Jacobian intervals, affine or
-  Taylor enclosures, certificates, or proof search.
+- The validated evaluator does not yet implement Jacobian intervals, affine or
+  Taylor enclosures, constrained ReLU splitting, certificates, or proof search.
+- Expression Set provides symbolic set descriptions, and Set provides validated
+  constrained images. Their solver dependencies are intended for optional
+  refinement of neural enclosures, not for every interval evaluation.
 - Floating-point sampling can falsify a bad enclosure but cannot prove
   mathematical inclusion. Correctness depends on the directed-rounding
   guarantees and supported elementary functions in Numeric.

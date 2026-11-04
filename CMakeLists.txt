@@ -20,12 +20,21 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/.git")
     require_same_dependency_commit(Configuration CHAINS
         "configuration"
         "neural|configuration"
-        "symbolic|configuration"
+        "expression-set|configuration"
+        "expression-set|set|configuration"
+        "expression-set|symbolic|configuration"
+        "testing|configuration"
+    )
+    require_same_dependency_commit(Function CHAINS
+        "expression-set|symbolic|function"
+        "expression-set|set|constraint-solving|nonlinear-programming|function"
     )
     require_same_dependency_commit(Testing CHAINS
         "testing"
         "neural|testing"
-        "symbolic|testing"
+        "expression-set|testing"
+        "expression-set|symbolic|testing"
+        "expression-set|set|testing"
     )
 endif()
 
@@ -40,7 +49,7 @@ target_include_directories(neurosymbolic INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include/ariadne-neurosymbolic>
 )
-target_link_libraries(neurosymbolic INTERFACE neural symbolic)
+target_link_libraries(neurosymbolic INTERFACE neural expression_set)
 
 add_subdirectory(src)
 target_link_libraries(NEUROSYMBOLIC_SRC PRIVATE neurosymbolic)

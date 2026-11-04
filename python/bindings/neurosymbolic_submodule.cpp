@@ -41,8 +41,8 @@ void neurosymbolic_submodule(pybind11::module& module) {
         &neurosymbolic_validated_bounds,
         pybind11::arg("snapshot"),pybind11::arg("input_box"));
 
-    // Symbolic expressions and derivatives are already exposed via
-    // pyariadne-symbolic. The C++ expansion API returns native
+    // Symbolic expressions and derivatives are exposed transitively via
+    // pyariadne-expression_set. The C++ expansion API returns native
     // Expression<Real> objects; dedicated Python expansion bindings
     // will follow tests of the complete expression conversion contract.
 }

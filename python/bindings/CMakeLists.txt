@@ -23,7 +23,7 @@ target_include_directories(pyariadne-neurosymbolic INTERFACE
 )
 target_link_libraries(pyariadne-neurosymbolic INTERFACE
     pyariadne-neural
-    pyariadne-symbolic
+    pyariadne-expression_set
 )
 
 ariadne_add_python_module(NAME neurosymbolic MODULE_SOURCE neurosymbolic_module.cpp)

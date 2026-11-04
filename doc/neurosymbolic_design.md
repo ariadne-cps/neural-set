@@ -3,9 +3,11 @@
 ## Architecture and responsibilities
 
 This repository owns **mathematical adapters around frozen Neural models**.
-It depends directly on Neural and Symbolic; Symbolic pulls Function, Geometry,
-Algebra, Interval and Numeric. Neural itself must remain independent of
-Function/Symbolic/Numeric, retaining portable CPU inference, training,
+It depends directly on Neural and Expression Set. Expression Set includes
+Symbolic (and Function) plus Set, which includes Linear Programming and
+Constraint Solving (and transitively Nonlinear Programming). Neural itself must
+remain independent of these mathematical components, retaining portable CPU
+inference, training,
 serializable binary64 snapshots and its own native backend selection.
 
 The explicit backend boundary means the reserved `AriadneValidated` enum
@@ -59,6 +61,23 @@ preferred over a bespoke Python binding to the large `Expression<Real>`
 type hierarchy; it can be exposed in Python after its interoperability
 and exception behavior have been validated.
 
+## Constrained neural maps and Expression Set boundary
+
+Neurosymbolic consumes Expression Set as its mathematical dependency, rather
+than pinning Symbolic and Set separately. Native Expression<Real> expansion
+remains supported; symbolic predicates and bounded expression-defined sets
+are available for interoperability with validated constrained image sets.
+
+Future neural-native propagation should accept existing FloatDPBall,
+FloatDPBounds and validated Taylor function models, preserve parameter
+dependencies, and return existing ValidatedConstrainedImageSet objects when
+ReLU activation signs require branching. Each branch must retain its own
+activation constraints and account rigorously for Taylor remainder errors.
+Constraint Solving, Nonlinear Programming and Linear Programming are optional
+refinement facilities: basic interval and Taylor evaluation must not depend
+on invoking a solver. Evolution may consume these images later; Neurosymbolic
+must not depend on Evolution or introduce duplicate constrained-Taylor types.
+
 ## Roadmap
 
 1. **N0 — Standalone module and CI:** mirror the Ariadne CMake, public
@@ -83,6 +102,8 @@ model serialization; it consumes Neural's current snapshot contract.
 
 | Date (UTC) | Milestone | Status | Changes, evidence, limitations |
 | --- | --- | --- | --- |
+| 2026-11-04 | Adopt Expression Set as the mathematical dependency | Implemented in source; CI pending | Replaced the direct Symbolic gitlink with Expression Set, which carries Symbolic and Set (with Linear Programming, Constraint Solving, and Nonlinear Programming transitively). Updated CMake dependency consistency checks, Python binding linkage, documentation and the build graph. No new mathematical types. |
+| 2026-11-04 | Repair existing validated Numeric API usage | Implemented in source; CI pending | Removed the conflicting local BoundsType alias and used FloatDPBounds directly. Constructed binary64 singleton intervals with ExactDouble and dp; changed C++ tests and tutorial to use the public FloatDP(ExactDouble(value),dp) constructor. |
 | 2026-11-04 | Pin Symbolic activation evaluation test correction | Implemented; CI pending | Updated ss/sym to symbolic d17d699a, correcting a test that compared Real expression trees structurally instead of checking rigorous numeric enclosure of evaluated sigmoid(0) and softplus(0). The mathematical APIs and symbolic activation support are unchanged. |\n| 2026-11-04 | Restore all five symbolic neural activations | Implemented; CI pending | Pinned ss/sym to Symbolic commit 7115fe33, which exposes sigmoid and softplus Expression<Real> functions with equivalent C++ and Python tests. Neurosymbolic now invokes the Symbolic operations directly, supports all five activation types and checks the two expansions and their derivatives against Symbolic reference expressions. |
 | 2026-11-04 | Reuse Ariadne Interval/Box and Numeric activations | Implemented; CI pending | Removed duplicate NeurosymbolicValidatedInterval and switched validated public signatures to FloatDPExactBox -> FloatDPUpperBox. Reused existing FloatDPBounds, make_interval and Numeric tanh/sigmoid/softplus. Symbolic expansion now rejects Sigmoid/Softplus where Expression<Real> lacks the operations instead of locally spelling them as formulas. Updated C++/Python tests, tutorials and README. Old CI was failing on compilation; this revision still needs CI verification. |
 | 2026-11-04 | Repository naming normalization after GitHub rename | Implemented; CI pending | Renamed repository-specific headers, source files, tests, directory paths, public API names, CMake project/targets, find-package module and documentation consistently to neurosymbolic / Neurosymbolic / NEUROSYMBOLIC. Kept upstream Neural and Symbolic type names unchanged. Checked every tracked source/config/document for obsolete neuro-symbolic, neuro_symbolic and NeuroSymbolic spellings. Pre-existing CI failures on earlier commit remain to be diagnosed independently. |

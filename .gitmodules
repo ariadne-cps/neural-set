@@ -4,9 +4,9 @@
 [submodule "neu"]
 	path = ss/neu
 	url = https://github.com/ariadne-cps/neural
-[submodule "sym"]
-	path = ss/sym
-	url = https://github.com/ariadne-cps/symbolic
+[submodule "exp"]
+	path = ss/exp
+	url = https://github.com/ariadne-cps/expression-set
 [submodule "tst"]
 	path = ss/tst
 	url = https://github.com/ariadne-cps/testing
