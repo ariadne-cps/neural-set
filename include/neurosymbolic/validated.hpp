@@ -79,14 +79,23 @@ public:
      */
     Vector<ValidatedTaylorModelDP> taylor(Vector<ValidatedTaylorModelDP> const& input) const;
 
-    /** @brief Piecewise validated Taylor image of the network.
-     *  Ambiguous ReLUs split into constrained parameter-domain branches.
-     *  Each branch returns a native ValidatedConstrainedImageSet on the shared
-     *  unit parameter box. Taylor remainders are included when forming guards.
-     *  No constraint solver is invoked and infeasible branches may remain.
+    /** @brief Implicit neural graph as one validated constrained image set.
+     *  This is the default representation. Original Taylor parameters,
+     *  uncertain inputs and ReLU outputs are represented using a shared
+     *  extended parameter domain; every ReLU is encoded by nonnegativity,
+     *  dominance and complementarity constraints.
+     *  A Taylor input's remainder is represented by a bounded auxiliary
+     *  input variable. No constraint solver is invoked automatically.
+     */
+    ValidatedConstrainedImageSet constrained_taylor(
+        Vector<ValidatedTaylorModelDP> const& input) const;
+
+    /** @brief Alternative explicit activation-branch representation.
+     *  Each branch is a validated constrained image set on the original
+     *  Taylor parameter box; ambiguous ReLUs may double the branch count.
      *  @throws std::length_error if max_branches would be exceeded.
      */
-    List<ValidatedConstrainedImageSet> constrained_taylor(
+    List<ValidatedConstrainedImageSet> branched_taylor(
         Vector<ValidatedTaylorModelDP> const& input,
         SizeType max_branches=1024u) const;
 

@@ -56,29 +56,30 @@ construct a branch union or claim tightness at ReLU boundaries.
 Python binding remains deferred until Function exposes native vectors
 of validated Taylor models.
 
-## Branch-constrained ReLU Taylor image (N3 second increment)
+## Configurable constrained Taylor representation
 
-`NeurosymbolicValidatedEvaluator::constrained_taylor(input, max_branches)`
-returns a `List<ValidatedConstrainedImageSet>`, each representing a validated
-Taylor image over the original unit parameter box, restricted by a list
-of validated parameter constraints. Ambiguous ReLU signs produce a pair of
-branches; stable signs do not split. A ReLU active branch carries the original
-preactivation Taylor model, while an inactive branch carries the zero model.
-All downstream layers propagate each branch independently. No new public
-numeric or set types are defined.
+The default `constrained_taylor(input)` represents the entire ReLU network
+using one `ValidatedConstrainedImageSet`. Its parameter domain includes:
+the original Taylor variables, an auxiliary neural input for each validated
+input Taylor model, and one auxiliary output per ReLU neuron. Every input
+is restricted by `-e_i <= x_i-p_i(s) <= e_i`, where `p_i` is the copied
+Taylor polynomial with only its remainder removed. ReLU output `y` and
+preactivation `z` are constrained by `y>=0`, `y>=z`, `y(y-z)=0`.
+These equations encode the exact ReLU relation and do not require choosing
+an activation pattern or throwing away Taylor remainders. The domain
+bounds of auxiliaries are determined via outward-rounded Numeric bounds
+propagation. Each ReLU contributes three constraints, each input one.
+No solver invocation occurs until explicitly calling `reduce()`.
 
-To obtain a sound *necessary* guard from preactivation `z(s) in p(s)+/-e`,
-the active branch enforces `p(s)>=-e`, and the inactive branch enforces
-`p(s)<=+e`. A temporary polynomial guard model is created by clobbering
-the remainder only in a copy, never in the propagated output. The constraints
-may overlap due to uncertainty, correctly retaining both possible activation
-states. They are not exact activation regions when `e>0`. The current
-implementation does not invoke a solver or prune infeasible branches,
-and it rejects a branch count exceeding `max_branches` rather than
-silently merging states. This function returns a *set image*, not a
-first-class multivalued state-to-neural-output function; closed-loop
-evolution must preserve the original parameterization to avoid losing
-input-output correlation.
+For callers who prefer explicit activation patterns,
+`branched_taylor(input,max_branches)` retains the former multi-image
+algorithm and its branch limit. The two choices are deliberately exposed
+as distinct methods rather than a return-type-changing enum: the
+mathematical results are not interchangeable C++ types. Neither is
+dependent on Evolution or causes an automatic nonlinear optimization.
+The implicit graph is a constrained *output image* with shared hidden
+parameters; callers who need the coupled input-output graph must retain
+or project those hidden coordinates appropriately.
 
 ## Symbolic expansion
 
@@ -144,6 +145,7 @@ model serialization; it consumes Neural's current snapshot contract.
 
 | Date (UTC) | Milestone | Status | Changes, evidence, limitations |
 | --- | --- | --- | --- |
+| 2026-11-05 | Implicit constraints as default; explicit branch alternative | Source, API, tests and docs updated; CI pending | constrained_taylor now returns a single ValidatedConstrainedImageSet encoding input Taylor uncertainty and exact ReLU complementarity via auxiliary variables, with no automatic solver. Former multi-image algorithm is explicitly exposed as branched_taylor(input,max_branches). Added regression tests for both activation signs, kink, nonzero input remainder and multiple ReLUs. No Evolution changes. |
 | 2026-11-05 | Clang -Wshadow fix in constrained Taylor tests | Source corrected; CI pending | Renamed a local NeuralParameterSnapshot test variable from `two` to `two_neuron_model` to avoid shadowing the existing Ariadne::two constant under Clang -Werror. Test scenarios, coverage, and production code unchanged. |
 | 2026-11-05 | N3 constrained ReLU branching | Source and C++ tests added; CI pending | New constrained_taylor overload returning List<ValidatedConstrainedImageSet>. ReLU branches are guarded by remainder-relaxed parameter constraints, preserve the original Taylor models and branch through subsequent layers. Optional branch cap rejects exponential explosion. Tests cover branch coverage, Taylor error ambiguity, stable signs and cap validation. Constraint solver is not called. |
 | 2026-11-05 | N3 initial: native validated Taylor-model propagation | Source and C++ regression tests added; CI pending | New evaluator.taylor overload for Vector<ValidatedTaylorModelDP>. Affine and all five activation functions reuse existing Function calculus and binary64 singleton bounds; tests cover affine derivatives, remainder propagation, dimension validation and pointwise certified inclusion. ReLU does not split into constrained branches. |

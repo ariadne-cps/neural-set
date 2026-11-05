@@ -135,7 +135,7 @@ ValidatedConstraint relu_parameter_guard(
 } // namespace
 
 List<ValidatedConstrainedImageSet>
-NeurosymbolicValidatedEvaluator::constrained_taylor(
+NeurosymbolicValidatedEvaluator::branched_taylor(
     Vector<ValidatedTaylorModelDP> const& input,
     SizeType max_branches) const {
     auto const& network=snapshot_.network();
@@ -221,6 +221,172 @@ NeurosymbolicValidatedEvaluator::constrained_taylor(
             image.new_parameter_constraint(constraint);
         result.append(std::move(image));
     }
+    return result;
+}
+
+
+namespace {
+
+// Every outward-rounded interval is a box of exact binary64 endpoints.
+ExactIntervalType exact_interval_from_bounds(FloatDPBounds const& bounds) {
+    const double lo=bounds.lower_raw().get_d();
+    const double hi=bounds.upper_raw().get_d();
+    if (!std::isfinite(lo) || !std::isfinite(hi) || lo>hi)
+        throw std::overflow_error("Nonfinite neural graph enclosure");
+    return ExactIntervalType(ExactDouble(lo),ExactDouble(hi));
+}
+
+FloatDPBounds bounds_from_taylor(ValidatedTaylorModelDP const& input) {
+    check_finite_taylor(input);
+    const auto range=input.range();
+    return FloatDPBounds(
+        ExactDouble(range.lower_bound().raw().get_d()),
+        ExactDouble(range.upper_bound().raw().get_d()),dp);
+}
+
+ValidatedNumber exact_graph_parameter(double value) {
+    return ValidatedNumber(exact_taylor_parameter(value));
+}
+
+ValidatedScalarMultivariateFunction polynomial_of_taylor(
+    ValidatedTaylorModelDP const& model, SizeType full_parameter_count) {
+    const SizeType n=model.argument_size();
+    auto polynomial=model;
+    polynomial.clobber(); // Only the polynomial copy loses the remainder.
+    const ExactBoxType unit=ExactBoxType::unit_box(n);
+    ValidatedScalarMultivariateTaylorFunctionModelDP patch(unit,polynomial);
+    ValidatedScalarMultivariateFunctionModelDP fm(patch);
+    ValidatedScalarMultivariateFunction scalar(fm.raw_pointer()->_clone());
+    // The first n parameters are the original Taylor variables.
+    ValidatedVectorMultivariateFunction projection(n,full_parameter_count);
+    for (SizeType i=0u; i<n; ++i)
+        projection.set(i,
+            ValidatedScalarMultivariateFunction::coordinate(full_parameter_count,i));
+    return compose(scalar,projection);
+}
+
+} // namespace
+
+ValidatedConstrainedImageSet NeurosymbolicValidatedEvaluator::constrained_taylor(
+    Vector<ValidatedTaylorModelDP> const& input) const {
+    const auto& network=snapshot_.network();
+    const SizeType input_count=input.size();
+    if (input_count==0u || input_count!=network.input_dimension())
+        throw std::invalid_argument("Wrong number of neural Taylor inputs");
+    const SizeType n=input[0].argument_size();
+    for (SizeType i=0u; i<input_count; ++i) {
+        if (input[i].argument_size()!=n)
+            throw std::invalid_argument("Incompatible neural Taylor parameter dimensions");
+        check_finite_taylor(input[i]);
+    }
+
+    // Bound each auxiliary ReLU output using independent, directed-rounded
+    // interval propagation. Constraints may later reduce these coarse bounds.
+    std::vector<ExactIntervalType> auxiliary_intervals;
+    auxiliary_intervals.reserve(input_count);
+    std::vector<FloatDPBounds> interval_state;
+    interval_state.reserve(input_count);
+    for (SizeType i=0u; i<input_count; ++i) {
+        auto const bounds=bounds_from_taylor(input[i]);
+        auxiliary_intervals.push_back(exact_interval_from_bounds(bounds));
+        interval_state.push_back(bounds);
+    }
+    auto const& coefficients=snapshot_.values();
+    SizeType relu_count=0u;
+    for (auto const& layer : network.layers()) {
+        std::vector<FloatDPBounds> interval_output;
+        interval_output.reserve(layer.outputs);
+        for (SizeType j=0u; j<layer.outputs; ++j) {
+            FloatDPBounds z=exact_taylor_parameter(coefficients[layer.biases_offset+j]);
+            for (SizeType i=0u; i<layer.inputs; ++i) {
+                z=z+exact_taylor_parameter(
+                    coefficients[layer.weights_offset+j*layer.inputs+i])*interval_state[i];
+                exact_interval_from_bounds(z);
+            }
+            FloatDPBounds y=z;
+            switch (layer.activation) {
+                case NeuralActivation::Identity: break;
+                case NeuralActivation::Relu:
+                    y=max(z,exact_taylor_parameter(0.0));
+                    auxiliary_intervals.push_back(exact_interval_from_bounds(y));
+                    ++relu_count;
+                    break;
+                case NeuralActivation::Tanh: y=tanh(z); break;
+                case NeuralActivation::Sigmoid: y=sigmoid(z); break;
+                case NeuralActivation::Softplus: y=softplus(z); break;
+                default: throw std::invalid_argument("Unsupported neural activation");
+            }
+            exact_interval_from_bounds(y);
+            interval_output.push_back(y);
+        }
+        interval_state.swap(interval_output);
+    }
+
+    const SizeType total_count=n+input_count+relu_count;
+    ExactBoxType domain(total_count);
+    for (SizeType i=0u; i<n; ++i)
+        domain[i]=ExactIntervalType(-1,1);
+    for (SizeType i=0u; i<auxiliary_intervals.size(); ++i)
+        domain[n+i]=auxiliary_intervals[i];
+
+    List<ValidatedConstraint> constraints;
+    std::vector<ValidatedScalarMultivariateFunction> state;
+    state.reserve(input_count);
+    for (SizeType i=0u; i<input_count; ++i) {
+        auto const x=ValidatedScalarMultivariateFunction::coordinate(
+            total_count,n+i);
+        const auto p=polynomial_of_taylor(input[i],total_count);
+        const auto remainder=exact_graph_parameter(
+            input[i].error().raw().get_d());
+        // True x_i(s) belongs to p_i(s) +/- remainder.
+        constraints.append(ValidatedConstraint(-remainder,x-p,remainder));
+        state.push_back(x);
+    }
+
+    SizeType next_relu=n+input_count;
+    for (auto const& layer : network.layers()) {
+        std::vector<ValidatedScalarMultivariateFunction> next;
+        next.reserve(layer.outputs);
+        for (SizeType j=0u; j<layer.outputs; ++j) {
+            auto z=ValidatedScalarMultivariateFunction::constant(
+                total_count,exact_graph_parameter(coefficients[layer.biases_offset+j]));
+            for (SizeType i=0u; i<layer.inputs; ++i)
+                z=z+state[i]*exact_graph_parameter(
+                    coefficients[layer.weights_offset+j*layer.inputs+i]);
+            switch (layer.activation) {
+                case NeuralActivation::Identity:
+                    next.push_back(z);
+                    break;
+                case NeuralActivation::Relu: {
+                    auto const y=ValidatedScalarMultivariateFunction::coordinate(
+                        total_count,next_relu++);
+                    constraints.append(exact_graph_parameter(0.0)<=y);
+                    constraints.append((z-y)<=exact_graph_parameter(0.0));
+                    constraints.append(ValidatedConstraint(
+                        exact_graph_parameter(0.0),y*(y-z),
+                        exact_graph_parameter(0.0)));
+                    next.push_back(y);
+                    break;
+                }
+                case NeuralActivation::Tanh:
+                    next.push_back(tanh(z)); break;
+                case NeuralActivation::Sigmoid:
+                    next.push_back(rec(1+exp(-z))); break;
+                case NeuralActivation::Softplus:
+                    next.push_back(log(1+exp(z))); break;
+                default:
+                    throw std::invalid_argument("Unsupported neural activation");
+            }
+        }
+        state.swap(next);
+    }
+
+    List<ValidatedScalarMultivariateFunction> outputs;
+    for (auto const& fn : state) outputs.append(fn);
+    ValidatedConstrainedImageSet result(
+        domain,ValidatedVectorMultivariateFunction(outputs));
+    for (auto const& constraint : constraints)
+        result.new_parameter_constraint(constraint);
     return result;
 }
 
