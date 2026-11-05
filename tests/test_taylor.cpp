@@ -180,10 +180,10 @@ public:
             Vector<ValidatedTaylorModelDP>{x});
         ARIADNE_TESTING_EXPECT_EQUAL(stable_branches.size(),SizeType{1});
         ARIADNE_TESTING_EXPECT_EQUAL(stable_branches[0].number_of_constraints(),SizeType{0});
-        NeuralParameterSnapshot two(
+        NeuralParameterSnapshot two_neuron_model(
             NeuralNetwork(1,{{2,NeuralActivation::Relu}}),
             {1.0,-1.0,0.0,0.0});
-        NeurosymbolicValidatedEvaluator evaluator(two);
+        NeurosymbolicValidatedEvaluator evaluator(two_neuron_model);
         auto const branches=evaluator.constrained_taylor(Vector<ValidatedTaylorModelDP>{x},4u);
         ARIADNE_TESTING_EXPECT_EQUAL(branches.size(),SizeType{4});
         for (auto const& branch : branches)
