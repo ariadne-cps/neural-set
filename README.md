@@ -4,6 +4,7 @@ Mathematical integration of trained neural networks with Ariadne Expression Set,
 Symbolic, Function and validated Numeric/Set facilities. This repository complements
 [Neural](https://github.com/ariadne-cps/neural), which retains ownership of
 network topology, inference, differentiation, training and persistence.
+Although independently maintained and usable, this repository is also part of the [Ariadne repository structure](https://github.com/ariadne-cps/ariadne/blob/main/doc/structure.md).
 
 ## Dependency architecture
 
