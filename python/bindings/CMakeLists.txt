@@ -26,4 +26,4 @@ target_link_libraries(pyariadne-neurosymbolic INTERFACE
     pyariadne-expression_set
 )
 
-ariadne_add_python_module(NAME neurosymbolic MODULE_SOURCE neurosymbolic_module.cpp)
+ariadne_add_python_module(NAME neurosymbolic MODULE_IMPORT_NAME pyariadne_neurosymbolic MODULE_SOURCE neurosymbolic_module.cpp)

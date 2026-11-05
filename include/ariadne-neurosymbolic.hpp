@@ -28,6 +28,9 @@
 #ifndef ARIADNE_NEUROSYMBOLIC_MODULE_HPP
 #define ARIADNE_NEUROSYMBOLIC_MODULE_HPP
 
+#include "ariadne-neural.hpp"
+#include "ariadne-expression-set.hpp"
+
 #include "neurosymbolic/neurosymbolic.hpp"
 #include "neurosymbolic/validated.hpp"
 #include "neurosymbolic/symbolic.hpp"

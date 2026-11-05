@@ -166,5 +166,3 @@ must be configured for the new repository.
 
 See [doc/neurosymbolic_design.md](doc/neurosymbolic_design.md) for the
 implementation journal, numeric semantics and remaining acceptance criteria.
-
-License: GPL-3.0-or-later.
