@@ -40,6 +40,7 @@
 #include "algebra/linear_algebra.decl.hpp"
 #include "numeric/float_ball.hpp"
 #include "numeric/float_bounds.hpp"
+#include "function/taylor_model.hpp"
 
 namespace Ariadne {
 
@@ -70,6 +71,12 @@ public:
 
     /** @brief Propagate full balls, including their radii, as bounds. */
     FloatDPBoundsVector bounds(FloatDPBallVector const& input) const;
+
+    /** @brief Propagate validated Taylor models, retaining parameter dependencies.
+     *  Each input model must have the same number of independent variables.
+     *  ReLU uses Function\'s validated max enclosure, without branch splitting.
+     */
+    Vector<ValidatedTaylorModelDP> taylor(Vector<ValidatedTaylorModelDP> const& input) const;
 
 private:
     NeuralParameterSnapshot snapshot_;

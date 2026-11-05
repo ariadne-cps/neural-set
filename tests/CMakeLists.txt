@@ -3,6 +3,7 @@ include(CTest)
 set(UNIT_TESTS
     test_neurosymbolic
     test_validated
+    test_taylor
     test_symbolic
     test_umbrella
 )

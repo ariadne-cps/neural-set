@@ -41,6 +41,21 @@ after every natural interval operation. A network can have correlated
 intermediate neuron values, making output enclosures wider than necessary.
 This first milestone does not promise the narrowest possible interval.
 
+## Validated Taylor propagation (N3 initial)
+
+`NeurosymbolicValidatedEvaluator::taylor(Vector<ValidatedTaylorModelDP>)`
+propagates an existing vector of validated Taylor models directly through
+the frozen network layers. All inputs must have the same number of independent
+unit-box parameters. The affine operations use exact binary64 weights as
+singleton `FloatDPBounds`, and the existing Function operations implement
+Identity, ReLU (validated `max`), Tanh, Sigmoid
+(`rec(1+exp(-x))`), and Softplus (`log(1+exp(x))`).
+This maintains polynomial correlations and propagates each model's remainder
+enclosure. It rejects nonfinite intermediate enclosures. It does not
+construct a branch union or claim tightness at ReLU boundaries.
+Python binding remains deferred until Function exposes native vectors
+of validated Taylor models.
+
 ## Symbolic expansion
 
 `neurosymbolic_expand(snapshot, variables)` builds ordinary
@@ -105,6 +120,7 @@ model serialization; it consumes Neural's current snapshot contract.
 
 | Date (UTC) | Milestone | Status | Changes, evidence, limitations |
 | --- | --- | --- | --- |
+| 2026-11-05 | N3 initial: native validated Taylor-model propagation | Source and C++ regression tests added; CI pending | New evaluator.taylor overload for Vector<ValidatedTaylorModelDP>. Affine and all five activation functions reuse existing Function calculus and binary64 singleton bounds; tests cover affine derivatives, remainder propagation, dimension validation and pointwise certified inclusion. ReLU does not split into constrained branches. |
 | 2026-11-04 | Fix Python invalid-box test setup | Test corrected; CI pending | Zero-dimensional FloatDPExactBox now uses the existing dimension constructor (`FloatDPExactBox(0)`) rather than an empty initializer list, which UniformArray rejects before validation. Kept reversed-endpoint rejection and added a nonempty wrong-dimension case; production Numeric and Neurosymbolic code unchanged. |
 | 2026-11-04 | Symbolic expansion semantic regression tests | Source tests updated; CI pending | Replaced inconclusive lazy Real equality with certified FloatDPBounds containment and tightness checks. Replaced structural identity between mathematically equivalent but syntactically distinct sigmoid/softplus trees with multi-point rigorous evaluation comparisons, retaining all five activation cases and independent smooth derivative checks. Production symbolic expansion unchanged. |
 | 2026-11-04 | N1 native ball and bounds propagation | Source, tests and Python bindings committed; CI pending | Added FloatDPBoundsVector and FloatDPBallVector overloads reusing the same FloatDPBounds propagation as the original FloatDPExactBox path. Ball conversion encloses the full radius. No custom interval types or solver calls. |

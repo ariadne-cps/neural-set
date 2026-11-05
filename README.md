@@ -58,6 +58,24 @@ literals. Intermediate infinities are rejected. The result is a
 mathematical inclusion, not a guarantee of tightness or of the exact
 floating-point execution order of Neural's approximate CPU engine.
 
+**Validated Taylor-model propagation** preserves dependence on a shared
+unit-box parameter domain. No neural-specific Taylor types are introduced:
+
+```cpp
+const Sweeper<FloatDP> swp=ThresholdSweeper<FloatDP>(dp,1e-12);
+auto x=ValidatedTaylorModelDP::coordinate(1u,0u,swp);
+auto outputs=evaluator.taylor(Vector<ValidatedTaylorModelDP>{x});
+```
+
+Identity, ReLU, Tanh, Sigmoid and Softplus are propagated using Function's
+validated Taylor operations. ReLU uses the existing validated `max`
+enclosure, rather than splitting into activation-constrained branches yet.
+The parameter-domain variables are maintained through the network. The
+input Taylor models must share the same parameter dimension; nonfinite
+enclosures are rejected. The Taylor-model overload is currently C++ only;
+Function's Python bindings do not expose `Vector<ValidatedTaylorModelDP>`
+as a public vector binding.
+
 **Symbolic expansion** creates native Ariadne `Expression<Real>` trees:
 
 ```cpp
@@ -95,8 +113,9 @@ must be configured for the new repository.
 
 ## Scope and limitations
 
-- The validated evaluator does not yet implement Jacobian intervals, affine or
-  Taylor enclosures, constrained ReLU splitting, certificates, or proof search.
+- The validated evaluator does not yet implement Jacobian intervals, constrained
+  ReLU splitting, certificates, or proof search. Taylor propagation currently
+  uses the existing natural Function calculus rather than adaptive branching.
 - Expression Set provides symbolic set descriptions, and Set provides validated
   constrained images. Their solver dependencies are intended for optional
   refinement of neural enclosures, not for every interval evaluation.

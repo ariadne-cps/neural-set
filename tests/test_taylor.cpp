@@ -1,0 +1,134 @@
+/***************************************************************************
+ *            tests/test_taylor.cpp
+ *
+ *  Copyright  2026  Luca Geretti
+ *
+ ****************************************************************************/
+
+/*
+ *  This file is part of Ariadne Neurosymbolic.
+ *
+ *  Ariadne Neurosymbolic is free software: you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License as published
+ *  by the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  Ariadne Neurosymbolic is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with Ariadne Neurosymbolic. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include "ariadne-neurosymbolic.hpp"
+#include "ariadne-testing.hpp"
+#include "algebra/sweeper.hpp"
+#include "numeric/builtin.hpp"
+
+#include <stdexcept>
+
+using namespace Ariadne;
+
+class TestTaylor : public Testing::ContextFixture {
+public:
+    using ContextFixture::ContextFixture;
+
+    void test_affine_map_preserves_dependencies() {
+        const Sweeper<FloatDP> swp=ThresholdSweeper<FloatDP>(dp,1e-12);
+        auto const x=ValidatedTaylorModelDP::coordinate(2u,0u,swp);
+        auto const y=ValidatedTaylorModelDP::coordinate(2u,1u,swp);
+        NeuralParameterSnapshot model(
+            NeuralNetwork(2,{{1,NeuralActivation::Identity}}),
+            {2.0,-3.0,0.5});
+        NeurosymbolicValidatedEvaluator evaluator(model);
+        Vector<ValidatedTaylorModelDP> input{x,y};
+        auto const output=evaluator.taylor(input);
+        ARIADNE_TESTING_EXPECT_EQUAL(output.size(),SizeType{1});
+        ARIADNE_TESTING_EXPECT_EQUAL(output[0].argument_size(),SizeType{2});
+        // Evaluate on a legal parameter point in the unit box.
+        Vector<FloatDPBounds> point{
+            FloatDPBounds(ExactDouble(0.25),dp),
+            FloatDPBounds(ExactDouble(-0.5),dp)
+        };
+        auto const actual=evaluate(output[0],point);
+        ARIADNE_TESTING_PROVE(actual.lower_raw().get_d()<=2.5);
+        ARIADNE_TESTING_PROVE(actual.upper_raw().get_d()>=2.5);
+        ARIADNE_TESTING_PROVE(actual.lower_raw().get_d()>2.499999999999);
+        ARIADNE_TESTING_PROVE(actual.upper_raw().get_d()<2.500000000001);
+        // The output must retain both parameter derivatives.
+        auto const dx=derivative(output[0],0u).range();
+        auto const dy=derivative(output[0],1u).range();
+        ARIADNE_TESTING_PROVE(dx.lower_bound().raw().get_d()<=2.0);
+        ARIADNE_TESTING_PROVE(dx.upper_bound().raw().get_d()>=2.0);
+        ARIADNE_TESTING_PROVE(dy.lower_bound().raw().get_d()<=-3.0);
+        ARIADNE_TESTING_PROVE(dy.upper_bound().raw().get_d()>=-3.0);
+
+        // A parameter-dimension mismatch must not silently discard inputs.
+        auto const incompatible=ValidatedTaylorModelDP::coordinate(1u,0u,swp);
+        ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
+            (void)evaluator.taylor(Vector<ValidatedTaylorModelDP>{x,incompatible}));
+        ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
+            (void)evaluator.taylor(Vector<ValidatedTaylorModelDP>{x}));
+    }
+
+    void test_all_activations_are_validated() {
+        const Sweeper<FloatDP> swp=ThresholdSweeper<FloatDP>(dp,1e-12);
+        auto const x=ValidatedTaylorModelDP::coordinate(1u,0u,swp);
+        for (auto activation : {NeuralActivation::Identity,
+                                NeuralActivation::Relu,
+                                NeuralActivation::Tanh,
+                                NeuralActivation::Sigmoid,
+                                NeuralActivation::Softplus}) {
+            NeuralParameterSnapshot model(
+                NeuralNetwork(1,{{1,activation}}),{1.0,0.0});
+            NeurosymbolicValidatedEvaluator evaluator(model);
+            auto const output=evaluator.taylor(Vector<ValidatedTaylorModelDP>{x});
+            ARIADNE_TESTING_EXPECT_EQUAL(output.size(),SizeType{1});
+            ARIADNE_TESTING_EXPECT_EQUAL(output[0].argument_size(),SizeType{1});
+            for (ExactDouble point_value : {-0.5_x,0.0_x,0.5_x}) {
+                FloatDPBounds const point(point_value,dp);
+                FloatDPBounds reference=point;
+                switch (activation) {
+                    case NeuralActivation::Identity: break;
+                    case NeuralActivation::Relu: reference=max(point,FloatDPBounds(0,dp)); break;
+                    case NeuralActivation::Tanh: reference=tanh(point); break;
+                    case NeuralActivation::Sigmoid: reference=sigmoid(point); break;
+                    case NeuralActivation::Softplus: reference=softplus(point); break;
+                    default: throw std::invalid_argument("Unsupported activation");
+                }
+                auto const actual=evaluate(output[0],Vector<FloatDPBounds>{point});
+                // Independent Numeric evaluation must be contained in the
+                // Taylor enclosure, including the ReLU kink at zero.
+                ARIADNE_TESTING_PROVE(actual.lower_raw().get_d()
+                                     <=reference.lower_raw().get_d());
+                ARIADNE_TESTING_PROVE(actual.upper_raw().get_d()
+                                     >=reference.upper_raw().get_d());
+            }
+        }
+    }
+
+    void test_input_remainder_is_preserved() {
+        const Sweeper<FloatDP> swp=ThresholdSweeper<FloatDP>(dp,1e-12);
+        auto uncertain=ValidatedTaylorModelDP::coordinate(1u,0u,swp);
+        uncertain.set_error(1u);
+        NeuralParameterSnapshot model(
+            NeuralNetwork(1,{{1,NeuralActivation::Identity}}),
+            {2.0,0.5});
+        auto const output=NeurosymbolicValidatedEvaluator(model).taylor(
+            Vector<ValidatedTaylorModelDP>{uncertain});
+        auto const value=evaluate(output[0],
+            Vector<FloatDPBounds>{FloatDPBounds(0,dp)});
+        ARIADNE_TESTING_PROVE(value.lower_raw().get_d()<=-1.5);
+        ARIADNE_TESTING_PROVE(value.upper_raw().get_d()>=2.5);
+    }
+};
+
+int main(int argc,char** argv) {
+    ARIADNE_TESTING_SUITE("taylor");
+    ARIADNE_TESTING_ADD_TEST(TestTaylor,test_affine_map_preserves_dependencies);
+    ARIADNE_TESTING_ADD_TEST(TestTaylor,test_all_activations_are_validated);
+    ARIADNE_TESTING_ADD_TEST(TestTaylor,test_input_remainder_is_preserved);
+    return ARIADNE_TESTING_RUN_TESTS_WITH_ARGS(argc,argv);
+}
