@@ -25,10 +25,43 @@
 #include "pybind11.hpp"
 #include "neurosymbolic/neurosymbolic.hpp"
 #include "neurosymbolic/validated.hpp"
+#include "neurosymbolic/symbolic.hpp"
 
+#include <stdexcept>
 #include <vector>
 
 using namespace Ariadne;
+
+namespace {
+
+// Function already exposes the scalar ValidatedTaylorModelDP class to Python,
+// but not Vector<ValidatedTaylorModelDP>. Cross this boundary using ordinary
+// Python lists instead of defining a second, incompatible vector class.
+Vector<ValidatedTaylorModelDP> taylor_models_from_python(pybind11::list const& items) {
+    if (pybind11::len(items)==0)
+        throw std::invalid_argument("At least one neural Taylor input is required");
+    const auto first=items[0].cast<ValidatedTaylorModelDP>();
+    Vector<ValidatedTaylorModelDP> result(static_cast<SizeType>(pybind11::len(items)),first);
+    for (SizeType i=1u; i<result.size(); ++i)
+        result[i]=items[i].cast<ValidatedTaylorModelDP>();
+    return result;
+}
+
+pybind11::list taylor_models_to_python(Vector<ValidatedTaylorModelDP> const& models) {
+    pybind11::list result;
+    for (SizeType i=0u; i<models.size(); ++i)
+        result.append(pybind11::cast(models[i]));
+    return result;
+}
+
+pybind11::list constrained_sets_to_python(List<ValidatedConstrainedImageSet> const& sets) {
+    pybind11::list result;
+    for (auto const& set : sets)
+        result.append(pybind11::cast(set));
+    return result;
+}
+
+} // namespace
 
 void neurosymbolic_submodule(pybind11::module& module) {
     module.def("neurosymbolic_version", &neurosymbolic_version);
@@ -40,14 +73,27 @@ void neurosymbolic_submodule(pybind11::module& module) {
         .def("bounds",pybind11::overload_cast<FloatDPBoundsVector const&>(
             &NeurosymbolicValidatedEvaluator::bounds,pybind11::const_),pybind11::arg("input_bounds"))
         .def("bounds",pybind11::overload_cast<FloatDPBallVector const&>(
-            &NeurosymbolicValidatedEvaluator::bounds,pybind11::const_),pybind11::arg("input_balls"));
+            &NeurosymbolicValidatedEvaluator::bounds,pybind11::const_),pybind11::arg("input_balls"))
+        .def("taylor",[](NeurosymbolicValidatedEvaluator const& evaluator,
+                           pybind11::list const& inputs) {
+            return taylor_models_to_python(evaluator.taylor(taylor_models_from_python(inputs)));
+        },pybind11::arg("inputs"))
+        .def("constrained_taylor",[](NeurosymbolicValidatedEvaluator const& evaluator,
+                                       pybind11::list const& inputs) {
+            return evaluator.constrained_taylor(taylor_models_from_python(inputs));
+        },pybind11::arg("inputs"))
+        .def("branched_taylor",[](NeurosymbolicValidatedEvaluator const& evaluator,
+                                    pybind11::list const& inputs, SizeType max_branches) {
+            return constrained_sets_to_python(
+                evaluator.branched_taylor(taylor_models_from_python(inputs),max_branches));
+        },pybind11::arg("inputs"),pybind11::arg("max_branches")=1024u);
 
     module.def("neurosymbolic_validated_bounds",
         &neurosymbolic_validated_bounds,
         pybind11::arg("snapshot"),pybind11::arg("input_box"));
 
-    // Symbolic expressions and derivatives are exposed transitively via
-    // pyariadne-expression_set. The C++ expansion API returns native
-    // Expression<Real> objects; dedicated Python expansion bindings
-    // will follow tests of the complete expression conversion contract.
+    // Reuse Symbolic's existing RealVariable and RealExpression bindings.
+    // The standard pybind11 STL casters provide list/vector conversion.
+    module.def("neurosymbolic_expand", &neurosymbolic_expand,
+        pybind11::arg("snapshot"),pybind11::arg("input_variables"));
 }

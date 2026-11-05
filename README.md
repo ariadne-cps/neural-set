@@ -72,9 +72,9 @@ validated Taylor operations. ReLU uses the existing validated `max`
 enclosure, rather than splitting into activation-constrained branches yet.
 The parameter-domain variables are maintained through the network. The
 input Taylor models must share the same parameter dimension; nonfinite
-enclosures are rejected. The Taylor-model overload is currently C++ only;
-Function's Python bindings do not expose `Vector<ValidatedTaylorModelDP>`
-as a public vector binding.
+enclosures are rejected. Both C++ and Python expose Taylor-model propagation. The Python adapter
+accepts a list of existing `ValidatedTaylorModelDP` objects rather than
+introducing another vector type.
 
 **Implicit constrained ReLU graph (default)** uses one
 `ValidatedConstrainedImageSet`, without enumerating activation patterns:
@@ -119,9 +119,16 @@ The two newer operations are provided directly by Symbolic as
 equivalent C++/Python tests in Symbolic. Numeric's existing correctly
 rounded implementations are reused in the validated interval evaluator.
 Analytic derivatives at activation kinks are not silently assumed;
-expression DAGs may grow substantially. Symbolic expansion is currently a
-C++ API; Python initially exposes the validated evaluator and existing
-Symbolic dependency types.
+expression DAGs may grow substantially. Symbolic network expansion is available in C++ and Python, reusing existing
+Symbolic `RealVariable` and `RealExpression` bindings.
+
+## Tutorials — C++ and Python
+
+The matching tutorials in [`tutorial/`](tutorial/README.md) exercise the
+main APIs: Box, Bounds, Ball, Taylor propagation, implicit and explicit
+ReLU constraints, symbolic expansion and differentiation, and all five
+activations. The standalone C++ and Python examples are also run in CI;
+their scenarios are intentionally identical.
 
 ## Build and tests
 
@@ -151,8 +158,9 @@ must be configured for the new repository.
 - Floating-point sampling can falsify a bad enclosure but cannot prove
   mathematical inclusion. Correctness depends on the directed-rounding
   guarantees and supported elementary functions in Numeric.
-- Python symbolic expression expansion and full Function object adapters
-  remain separate roadmap increments; they are not claimed implemented.
+- Python binding parity covers the implemented Neurosymbolic evaluation and
+  expansion methods; no duplicate Numeric, Function, Set or Symbolic types
+  are introduced.
 - `reasoning` may consume this repository in future, but this module does
   not import the reasoning engine.
 

@@ -23,25 +23,91 @@
  */
 
 #include "ariadne-neurosymbolic.hpp"
-#include "numeric/real.hpp"
+#include "algebra/sweeper.hpp"
 #include "numeric/builtin.hpp"
 #include "numeric/floats.hpp"
 
 #include <iostream>
+#include <stdexcept>
+#include <vector>
+
+using namespace Ariadne;
 
 int main() {
-    using namespace Ariadne;
-    NeuralNetwork model(1,{{1,NeuralActivation::Tanh}});
-    NeuralParameterSnapshot snapshot(model,{2.0,0.0});
-    auto const enclosure=NeurosymbolicValidatedEvaluator(snapshot).bounds(
-        FloatDPExactBox({FloatDPExactInterval(FloatDP(ExactDouble(-1.0),dp),FloatDP(ExactDouble(1.0),dp))}));
     std::cout << "Neurosymbolic " << neurosymbolic_version() << '\n';
-    std::cout << "Validated output: [" << enclosure[0].lower_bound()
-              << ", " << enclosure[0].upper_bound() << "]\n";
-    RealVariable x("x");
-    auto const expressions=neurosymbolic_expand(snapshot,{x});
-    std::cout << "Expanded expressions: " << expressions.size() << '\n';
-    auto const df=derivative(expressions.at(0),x);
-    (void)df;
+
+    // 1. A smooth frozen network. Every stored binary64 coefficient denotes
+    //    its exact dyadic real value in the validated and symbolic paths.
+    NeuralParameterSnapshot smooth(
+        NeuralNetwork(1,{{1,NeuralActivation::Tanh}}),{2.0,0.0});
+    NeurosymbolicValidatedEvaluator smooth_evaluator(smooth);
+    FloatDPExactBox input_box({
+        FloatDPExactInterval(
+            FloatDP(ExactDouble(-1.0),dp),
+            FloatDP(ExactDouble(1.0),dp))
+    });
+    auto const boxed=smooth_evaluator.bounds(input_box);
+    std::cout << "Box -> Tanh enclosure: " << boxed << '\n';
+
+    // 2. Both Bounds and Ball inputs work through the same validated
+    //    numerical engine. Ball-to-Bounds includes the full ball radius.
+    FloatDPBoundsVector bounds_input({
+        FloatDPBounds(ExactDouble(-1.0),ExactDouble(1.0),dp)
+    });
+    FloatDPBallVector ball_input({FloatDPBall(bounds_input[0])});
+    auto const bounded=smooth_evaluator.bounds(bounds_input);
+    auto const balled=smooth_evaluator.bounds(ball_input);
+    std::cout << "Bounds -> Tanh enclosure: " << bounded << '\n';
+    std::cout << "Ball -> Tanh enclosure: " << balled << '\n';
+
+    // 3. Native Function Taylor models retain parameter dependence.
+    const Sweeper<FloatDP> sweeper=ThresholdSweeper<FloatDP>(dp,1e-12);
+    auto const x=ValidatedTaylorModelDP::coordinate(1u,0u,sweeper);
+    auto const smooth_taylor=smooth_evaluator.taylor(
+        Vector<ValidatedTaylorModelDP>{x});
+    std::cout << "Tanh Taylor enclosure: " << smooth_taylor[0].range() << '\n';
+
+    // 4. The default ReLU representation is ONE constrained image set.
+    //    The constraints encode the input Taylor error and the exact
+    //    complementarity relation y>=0, y>=z, y*(y-z)==0.
+    NeuralParameterSnapshot relu(
+        NeuralNetwork(1,{{1,NeuralActivation::Relu}}),{1.0,0.0});
+    NeurosymbolicValidatedEvaluator relu_evaluator(relu);
+    auto const implicit=relu_evaluator.constrained_taylor(
+        Vector<ValidatedTaylorModelDP>{x});
+    std::cout << "Implicit ReLU parameters: "
+              << implicit.number_of_parameters() << '\n';
+    std::cout << "Implicit ReLU constraints: "
+              << implicit.number_of_constraints() << '\n';
+    if (implicit.number_of_parameters()!=3u ||
+        implicit.number_of_constraints()!=4u)
+        throw std::runtime_error("Unexpected implicit ReLU model");
+
+    // 5. The alternative enumerates explicit activation patterns.
+    auto const branches=relu_evaluator.branched_taylor(
+        Vector<ValidatedTaylorModelDP>{x},4u);
+    std::cout << "Explicit ReLU branches: " << branches.size() << '\n';
+    if (branches.size()!=2u)
+        throw std::runtime_error("Unexpected explicit ReLU branches");
+    // Neither method invokes ConstraintSolver automatically. A caller may
+    // explicitly use reduce() on a constrained image set when needed.
+
+    // 6. Symbolic expansion returns existing Expression<Real> objects.
+    //    Differentiation is shown only for the smooth Tanh network.
+    RealVariable variable("x");
+    auto const expressions=neurosymbolic_expand(smooth,{variable});
+    auto const derivative_expression=derivative(expressions.at(0),variable);
+    std::cout << "Symbolic outputs: " << expressions.size() << '\n';
+    std::cout << "Symbolic derivative: " << derivative_expression << '\n';
+
+    // 7. All five Neural activations work with validated bounds.
+    for (auto activation : {NeuralActivation::Identity,NeuralActivation::Relu,
+                            NeuralActivation::Tanh,NeuralActivation::Sigmoid,
+                            NeuralActivation::Softplus}) {
+        NeuralParameterSnapshot model(
+            NeuralNetwork(1,{{1,activation}}),{1.0,0.0});
+        auto const outputs=NeurosymbolicValidatedEvaluator(model).bounds(bounds_input);
+        std::cout << "Activation enclosure: " << outputs << '\n';
+    }
     return 0;
 }
