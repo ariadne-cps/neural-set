@@ -28,6 +28,7 @@
 #include "numeric/builtin.hpp"
 
 #include <stdexcept>
+#include <limits>
 
 using namespace Ariadne;
 
@@ -109,6 +110,88 @@ public:
         }
     }
 
+
+    void test_constrained_relu_branches() {
+        const Sweeper<FloatDP> swp=ThresholdSweeper<FloatDP>(dp,1e-12);
+        auto const x=ValidatedTaylorModelDP::coordinate(1u,0u,swp);
+        NeuralParameterSnapshot model(
+            NeuralNetwork(1,{{1,NeuralActivation::Relu}}),{1.0,0.0});
+        NeurosymbolicValidatedEvaluator evaluator(model);
+        auto const branches=evaluator.constrained_taylor(Vector<ValidatedTaylorModelDP>{x});
+        ARIADNE_TESTING_EXPECT_EQUAL(branches.size(),SizeType{2});
+        for (auto const& branch : branches) {
+            ARIADNE_TESTING_EXPECT_EQUAL(branch.dimension(),SizeType{1});
+            ARIADNE_TESTING_EXPECT_EQUAL(branch.number_of_parameters(),SizeType{1});
+            ARIADNE_TESTING_EXPECT_EQUAL(branch.number_of_constraints(),SizeType{1});
+        }
+        // A strictly negative parameter admits only the inactive branch,
+        // and a positive parameter admits only the active branch.
+        for (ExactDouble sample : {-0.75_x,0.0_x,0.75_x}) {
+            auto const point=Vector<FloatDPBounds>{FloatDPBounds(sample,dp)};
+            auto const expected=max(point[0],FloatDPBounds(0,dp));
+            bool covered=false;
+            for (auto const& branch : branches) {
+                auto const guard=branch.constraint(0u);
+                auto const guard_value=guard.function()(point);
+                if (guard_value.upper_raw().get_d()<guard.lower_bound().get(dp).lower_raw().get_d() ||
+                    guard_value.lower_raw().get_d()>guard.upper_bound().get(dp).upper_raw().get_d())
+                    continue;
+                auto const output=branch.function()(point)[0u];
+                if (output.lower_raw().get_d()<=expected.lower_raw().get_d() &&
+                    output.upper_raw().get_d()>=expected.upper_raw().get_d())
+                    covered=true;
+            }
+            ARIADNE_TESTING_PROVE(covered);
+        }
+        ARIADNE_TESTING_EXPECT_THROWS(std::length_error,
+            (void)evaluator.constrained_taylor(Vector<ValidatedTaylorModelDP>{x},1u));
+        ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
+            (void)evaluator.constrained_taylor(Vector<ValidatedTaylorModelDP>{x},0u));
+    }
+
+    void test_remainder_safe_relu_guards() {
+        const Sweeper<FloatDP> swp=ThresholdSweeper<FloatDP>(dp,1e-12);
+        auto x=ValidatedTaylorModelDP::coordinate(1u,0u,swp);
+        x.set_error(1u);
+        NeuralParameterSnapshot model(
+            NeuralNetwork(1,{{1,NeuralActivation::Relu}}),{1.0,0.0});
+        auto const branches=NeurosymbolicValidatedEvaluator(model).constrained_taylor(
+            Vector<ValidatedTaylorModelDP>{x});
+        ARIADNE_TESTING_EXPECT_EQUAL(branches.size(),SizeType{2});
+        // At parameter s=+0.5 an admissible input is s-1=-0.5.
+        // Both branches must remain possible because the Taylor error is 1.
+        const Vector<FloatDPBounds> point{FloatDPBounds(ExactDouble(0.5),dp)};
+        for (auto const& branch : branches) {
+            auto const guard=branch.constraint(0u);
+            auto const guard_value=guard.function()(point);
+            ARIADNE_TESTING_PROVE(
+                guard_value.upper_raw().get_d()>=guard.lower_bound().get(dp).lower_raw().get_d());
+            ARIADNE_TESTING_PROVE(
+                guard_value.lower_raw().get_d()<=guard.upper_bound().get(dp).upper_raw().get_d());
+        }
+    }
+
+    void test_stable_relu_and_multineuron_branch_limit() {
+        const Sweeper<FloatDP> swp=ThresholdSweeper<FloatDP>(dp,1e-12);
+        auto const x=ValidatedTaylorModelDP::coordinate(1u,0u,swp);
+        NeuralParameterSnapshot stable(
+            NeuralNetwork(1,{{1,NeuralActivation::Relu}}),{1.0,3.0});
+        auto const stable_branches=NeurosymbolicValidatedEvaluator(stable).constrained_taylor(
+            Vector<ValidatedTaylorModelDP>{x});
+        ARIADNE_TESTING_EXPECT_EQUAL(stable_branches.size(),SizeType{1});
+        ARIADNE_TESTING_EXPECT_EQUAL(stable_branches[0].number_of_constraints(),SizeType{0});
+        NeuralParameterSnapshot two(
+            NeuralNetwork(1,{{2,NeuralActivation::Relu}}),
+            {1.0,-1.0,0.0,0.0});
+        NeurosymbolicValidatedEvaluator evaluator(two);
+        auto const branches=evaluator.constrained_taylor(Vector<ValidatedTaylorModelDP>{x},4u);
+        ARIADNE_TESTING_EXPECT_EQUAL(branches.size(),SizeType{4});
+        for (auto const& branch : branches)
+            ARIADNE_TESTING_EXPECT_EQUAL(branch.number_of_constraints(),SizeType{2});
+        ARIADNE_TESTING_EXPECT_THROWS(std::length_error,
+            (void)evaluator.constrained_taylor(Vector<ValidatedTaylorModelDP>{x},3u));
+    }
+
     void test_input_remainder_is_preserved() {
         const Sweeper<FloatDP> swp=ThresholdSweeper<FloatDP>(dp,1e-12);
         auto uncertain=ValidatedTaylorModelDP::coordinate(1u,0u,swp);
@@ -130,5 +213,8 @@ int main(int argc,char** argv) {
     ARIADNE_TESTING_ADD_TEST(TestTaylor,test_affine_map_preserves_dependencies);
     ARIADNE_TESTING_ADD_TEST(TestTaylor,test_all_activations_are_validated);
     ARIADNE_TESTING_ADD_TEST(TestTaylor,test_input_remainder_is_preserved);
+    ARIADNE_TESTING_ADD_TEST(TestTaylor,test_constrained_relu_branches);
+    ARIADNE_TESTING_ADD_TEST(TestTaylor,test_remainder_safe_relu_guards);
+    ARIADNE_TESTING_ADD_TEST(TestTaylor,test_stable_relu_and_multineuron_branch_limit);
     return ARIADNE_TESTING_RUN_TESTS_WITH_ARGS(argc,argv);
 }

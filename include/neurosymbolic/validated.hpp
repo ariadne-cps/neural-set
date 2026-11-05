@@ -41,6 +41,7 @@
 #include "numeric/float_ball.hpp"
 #include "numeric/float_bounds.hpp"
 #include "function/taylor_model.hpp"
+#include "set/function_set.hpp"
 
 namespace Ariadne {
 
@@ -77,6 +78,17 @@ public:
      *  ReLU uses Function\'s validated max enclosure, without branch splitting.
      */
     Vector<ValidatedTaylorModelDP> taylor(Vector<ValidatedTaylorModelDP> const& input) const;
+
+    /** @brief Piecewise validated Taylor image of the network.
+     *  Ambiguous ReLUs split into constrained parameter-domain branches.
+     *  Each branch returns a native ValidatedConstrainedImageSet on the shared
+     *  unit parameter box. Taylor remainders are included when forming guards.
+     *  No constraint solver is invoked and infeasible branches may remain.
+     *  @throws std::length_error if max_branches would be exceeded.
+     */
+    List<ValidatedConstrainedImageSet> constrained_taylor(
+        Vector<ValidatedTaylorModelDP> const& input,
+        SizeType max_branches=1024u) const;
 
 private:
     NeuralParameterSnapshot snapshot_;

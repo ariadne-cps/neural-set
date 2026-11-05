@@ -76,6 +76,23 @@ enclosures are rejected. The Taylor-model overload is currently C++ only;
 Function's Python bindings do not expose `Vector<ValidatedTaylorModelDP>`
 as a public vector binding.
 
+**ReLU branching with validated constraints** returns a list of
+`ValidatedConstrainedImageSet` objects when activation patterns cannot be
+certified on the parameter box:
+
+```cpp
+auto branches=evaluator.constrained_taylor(
+    Vector<ValidatedTaylorModelDP>{x}, 1024u);
+```
+
+For `z(s)=p(s)+/-e`, the active branch uses the necessary constraint
+`p(s)>=-e` and propagates `z(s)`; the inactive branch uses `p(s)<=e`
+and propagates zero. Both branches remain if the Taylor remainder prevents
+sign certification. No constraint solver or branch merging is performed,
+and hitting the specified maximum branch count throws an exception.
+The output is a union of constrained set images; it does not by itself
+define a first-class coupled state/output map for closed-loop evolution.
+
 **Symbolic expansion** creates native Ariadne `Expression<Real>` trees:
 
 ```cpp
