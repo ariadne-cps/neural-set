@@ -26,7 +26,7 @@ import math
 
 import pytest
 
-from pyariadne import (
+from pyariadne_neurosymbolic import (
     NeuralActivation,
     NeuralDenseLayerSpec,
     NeuralNetwork,
