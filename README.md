@@ -127,8 +127,8 @@ Symbolic `RealVariable` and `RealExpression` bindings.
 The matching tutorials in [`tutorial/`](tutorial/README.md) exercise the
 main APIs: Box, Bounds, Ball, Taylor propagation, implicit and explicit
 ReLU constraints, symbolic expansion and differentiation, and all five
-activations. The standalone C++ and Python examples are also run in CI;
-their scenarios are intentionally identical.
+activations. They are standalone examples, not part of CTest or pytest;
+unit-test coverage is maintained separately.
 
 ## Build and tests
 

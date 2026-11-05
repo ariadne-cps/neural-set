@@ -281,7 +281,7 @@ insufficient.
 | 2026-11-05 | Explicit ReLU branching | `branched_taylor()` retained as a bounded, potentially loose alternative |
 | 2026-11-05 | Implicit ReLU constraints as default | `constrained_taylor()` returns one constrained image with complementarity |
 | 2026-11-05 | Baseline established | All five GitHub Actions workflows passed at `953d1a8` |
-| 2026-11-05 | Matched C++/Python tutorials | Expanded the same seven use cases in both languages, exposed missing Python adapter methods and symbolic expansion, and added tutorial execution to CTest/pytest. This changes binding/tutorial scope only; mathematical engine unchanged. |
+| 2026-11-05 | Matched standalone C++/Python tutorials | Expanded the same seven use cases in both languages and exposed missing Python adapter methods and symbolic expansion. Tutorials remain separate from CTest, pytest and coverage; mathematical engine unchanged. |
 
 Superseded APIs, test repairs, and intermediate failed CI runs are
 preserved in Git history, not repeated as active design requirements.

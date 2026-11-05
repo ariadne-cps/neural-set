@@ -30,9 +30,10 @@ cmake --build build
 python tutorial_neurosymbolic.py
 ```
 
-The C++ executable is also built and run by the repository's CTest suite,
-while pytest runs the Python tutorial from `python/tests`. Consequently
-both examples are exercised by CI after their bindings have been built.
+These are standalone examples. Run them explicitly using the commands
+above; they are intentionally not registered as CTest or pytest tests.
+Unit tests and coverage are maintained separately in `tests/` and
+`python/tests/`.
 
 These examples illustrate sound enclosures but do not constitute
 independent formal proofs of all network behaviours. See
