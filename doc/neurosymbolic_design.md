@@ -1,161 +1,290 @@
-# Ariadne Neurosymbolic design and implementation journal
+# Neurosymbolic — design and verification journal
 
-## Architecture and responsibilities
+**Reference:** `main@953d1a8464b2b09c2fa479b64e97317a25891e24` (2026-11-05).
+This document separates the current mathematical contract, implementation,
+known limitations, validation plan, and historical decisions. Source code and
+tests remain authoritative; this is not a record of superseded CI failures.
 
-This repository owns **mathematical adapters around frozen Neural models**.
-It depends directly on Neural and Expression Set. Expression Set includes
-Symbolic (and Function) plus Set, which includes Linear Programming and
-Constraint Solving (and transitively Nonlinear Programming). Neural itself must
-remain independent of these mathematical components, retaining portable CPU
-inference, training,
-serializable binary64 snapshots and its own native backend selection.
+## 1. Purpose and architectural boundaries
 
-The explicit backend boundary means the reserved `AriadneValidated` enum
-in Neural is **not** activated there. Validated evaluation is a separate
-`NeurosymbolicValidatedEvaluator` in this repository. No approximate fallback
-is permitted or relabeled as validated.
+Neurosymbolic is the **mathematical adapter for frozen Neural snapshots**.
+Neural owns topology, training, serialization, portable CPU inference, and
+native backend selection. Neurosymbolic owns rigorous numerical evaluation,
+symbolic expansion, and constraint-based mathematical representations.
+The reserved `AriadneValidated` backend in Neural is not activated here.
 
-## Canonical mathematical semantics
+Direct dependencies are `neural` and `expression-set`. The latter
+transitively includes `symbolic` (and `function`) and `set` (with
+`linear-programming`, `constraint-solving`, and `nonlinear-programming`).
+`build` and `testing` provide infrastructure. CMake checks the consistency
+of shared Build, Function, and Testing dependency commits.
 
-Inputs are vectors of closed finite binary64 endpoint intervals. Parameters
-and biases from immutable Neural snapshots represent **exact** dyadic real
-numbers identified by their IEEE-754 binary64 bit patterns. A coefficient
-such as `0.1` represents the binary64 value, not exact decimal 1/10.
+**Invariants and decisions:**
 
-The reference mathematical map is a composition of dense affine layers
-followed by identity, ReLU, tanh, sigmoid, or softplus activations.
-Interval bound propagation uses Numeric's `FloatDPBounds` for all affine
-terms and monotone validated elementary activations. Native `FloatDPBoundsVector`
-and `FloatDPBallVector` inputs return `FloatDPBoundsVector`. A ball's complete
-radius is enclosed through Numeric's directed-rounded conversion before
-propagation. The existing `FloatDPExactBox` input and `FloatDPUpperBox`
-output remain available, which
-are composed from Ariadne's `Interval` and `Box` abstractions.
-There is no custom interval or box. Existing `FloatDPBounds` operations
-perform the arithmetic and Numeric's `tanh`, `sigmoid` and `softplus`
-are invoked directly. Inputs are finite and ordered; operations abort on any nonfinite intermediate
-bound, rather than advertising an invalid or incomplete certificate.
+- Reuse Ariadne Numeric, Function, Symbolic, and Set types. Do not implement
+  duplicate balls, bounds, Taylor models, or constrained image sets.
+- Never relabel approximate CPU arithmetic as validated. Validated paths
+  must preserve outward enclosures and reject nonfinite intermediates.
+- Constructing a constrained set must not invoke a solver automatically.
+  Feasibility/refinement is a separate, optional operation.
+- No dependencies on `evolution` or `reasoning`. Compose with those modules
+  downstream using existing Function/Set operations.
+- Preserve mathematical behaviour and test coverage rather than adjusting
+  tests to force a green regression.
 
-The approach is *sound but potentially loose*: dependency is forgotten
-after every natural interval operation. A network can have correlated
-intermediate neuron values, making output enclosures wider than necessary.
-This first milestone does not promise the narrowest possible interval.
+## 2. Mathematical semantics
 
-## Validated Taylor propagation (N3 initial)
+The reference map is a dense feed-forward network whose layer activations
+are **Identity, ReLU, Tanh, Sigmoid, and Softplus**. Stored IEEE-754 binary64
+weights and biases denote their **exact dyadic real values**: the stored
+binary64 approximation of a decimal literal is not the exact decimal rational.
+This is real-function semantics, not bit-for-bit equivalence with Neural's
+floating-point CPU execution order.
 
-`NeurosymbolicValidatedEvaluator::taylor(Vector<ValidatedTaylorModelDP>)`
-propagates an existing vector of validated Taylor models directly through
-the frozen network layers. All inputs must have the same number of independent
-unit-box parameters. The affine operations use exact binary64 weights as
-singleton `FloatDPBounds`, and the existing Function operations implement
-Identity, ReLU (validated `max`), Tanh, Sigmoid
-(`rec(1+exp(-x))`), and Softplus (`log(1+exp(x))`).
-This maintains polynomial correlations and propagates each model's remainder
-enclosure. It rejects nonfinite intermediate enclosures. It does not
-construct a branch union or claim tightness at ReLU boundaries.
-Python binding remains deferred until Function exposes native vectors
-of validated Taylor models.
+The three validated input families are finite closed intervals, balls,
+and Taylor models. Natural interval arithmetic may lose dependencies;
+Taylor arithmetic retains polynomial dependencies and validated remainder
+bounds, but no path promises optimal tightness.
 
-## Configurable constrained Taylor representation
+For `d` Taylor inputs on a common `n`-dimensional unit parameter box,
+the intended enclosure is
 
-The default `constrained_taylor(input)` represents the entire ReLU network
-using one `ValidatedConstrainedImageSet`. Its parameter domain includes:
-the original Taylor variables, an auxiliary neural input for each validated
-input Taylor model, and one auxiliary output per ReLU neuron. Every input
-is restricted by `-e_i <= x_i-p_i(s) <= e_i`, where `p_i` is the copied
-Taylor polynomial with only its remainder removed. ReLU output `y` and
-preactivation `z` are constrained by `y>=0`, `y>=z`, `y(y-z)=0`.
-These equations encode the exact ReLU relation and do not require choosing
-an activation pattern or throwing away Taylor remainders. The domain
-bounds of auxiliaries are determined via outward-rounded Numeric bounds
-propagation. Each ReLU contributes three constraints, each input one.
-No solver invocation occurs until explicitly calling `reduce()`.
+```text
+s in [-1,+1]^n
+x_i(s) in p_i(s) + [-e_i,+e_i]     (i = 0,...,d-1)
+```
 
-For callers who prefer explicit activation patterns,
-`branched_taylor(input,max_branches)` retains the former multi-image
-algorithm and its branch limit. The two choices are deliberately exposed
-as distinct methods rather than a return-type-changing enum: the
-mathematical results are not interchangeable C++ types. Neither is
-dependent on Evolution or causes an automatic nonlinear optimization.
-The implicit graph is a constrained *output image* with shared hidden
-parameters; callers who need the coupled input-output graph must retain
-or project those hidden coordinates appropriately.
+Here `p_i` is a Taylor polynomial and `e_i` a nonnegative validated error
+bound. The error interval is an **enclosure**, not a claim that all errors
+are independently realizable. Replacing the true correlated error set by
+independently bounded auxiliary inputs is an intentional outer
+approximation. In particular, retaining inputs within their Taylor bounds
+is not equivalent to proving a unique exact input value for every `s`.
 
-## Symbolic expansion
+Validated evaluation rejects incompatible dimensions and nonfinite
+intermediate enclosures. No derivative is claimed at a ReLU kink.
 
-`neurosymbolic_expand(snapshot, variables)` builds ordinary
-`Expression<Real>` objects, using exact `Real(ExactDouble(weight))`
-coefficients. Every neuron produces a DAG node built from affine operations
-and an activation expression. All five activations are supported:
-Identity, ReLU, Tanh, Sigmoid and Softplus. The two latter functions were
-added to Symbolic as `Expression<Real>` compositions of its elementary
-operators, with tests for derivative, simplification, evaluation,
-classification and Python bindings. The adapter now invokes
-`sigmoid(value)` and `softplus(value)` directly rather than duplicating
-their formulas. Numeric continues to provide the rigorous interval
-implementations used by the validated evaluator.
+## 3. Current public interfaces
 
-Consequently Symbolic's already implemented `derivative`, `simplify`,
-`substitute` and `make_function` can be used on resulting expressions
-where defined. This does not automatically grant differentiability at ReLU
-zero nor rigorous verification of properties. Expansion can be very large
-on deep/wide networks. The native C++ model expansion API is initially
-preferred over a bespoke Python binding to the large `Expression<Real>`
-type hierarchy; it can be exposed in Python after its interoperability
-and exception behavior have been validated.
-
-## Constrained neural maps and Expression Set boundary
-
-Neurosymbolic consumes Expression Set as its mathematical dependency, rather
-than pinning Symbolic and Set separately. Native Expression<Real> expansion
-remains supported; symbolic predicates and bounded expression-defined sets
-are available for interoperability with validated constrained image sets.
-
-Future neural-native propagation should accept existing FloatDPBall,
-FloatDPBounds and validated Taylor function models, preserve parameter
-dependencies, and return existing ValidatedConstrainedImageSet objects when
-ReLU activation signs require branching. Each branch must retain its own
-activation constraints and account rigorously for Taylor remainder errors.
-Constraint Solving, Nonlinear Programming and Linear Programming are optional
-refinement facilities: basic interval and Taylor evaluation must not depend
-on invoking a solver. Evolution may consume these images later; Neurosymbolic
-must not depend on Evolution or introduce duplicate constrained-Taylor types.
-
-## Roadmap
-
-1. **N0 — Standalone module and CI:** mirror the Ariadne CMake, public
-   umbrella header, Python extension, submodule pinning, tests, tutorials,
-   installation smoke tests, and five CI workflows.
-2. **N1 — Validated bounds:** natural interval propagation, true Numeric
-   directed rounding, activation coverage and model/parameter assumptions.
-3. **N2 — Symbolic composition:** exact coefficient embedding into
-   Symbolic Expression DAGs, differentiability and substitution tests.
-4. **N3 — Stronger enclosure:** validated derivative bounds, dependency
-   reduction (affine/Taylor propagation), and trustworthy cross-module
-   independent enclosure oracles.
-5. **N4 — Function integration:** explicit adapters to Function interfaces,
-   interoperability with Reasoning without adding Reasoning dependencies.
-6. **N5 — Larger-model performance:** avoid expression explosion and
-   profile interval/CPU evaluations separately.
-
-Do not introduce artificial version negotiation for the new repository's
-model serialization; it consumes Neural's current snapshot contract.
-
-## Implementation log
-
-| Date (UTC) | Milestone | Status | Changes, evidence, limitations |
+| Operation | Input | Output | Meaning |
 | --- | --- | --- | --- |
-| 2026-11-05 | Implicit constraints as default; explicit branch alternative | Source, API, tests and docs updated; CI pending | constrained_taylor now returns a single ValidatedConstrainedImageSet encoding input Taylor uncertainty and exact ReLU complementarity via auxiliary variables, with no automatic solver. Former multi-image algorithm is explicitly exposed as branched_taylor(input,max_branches). Added regression tests for both activation signs, kink, nonzero input remainder and multiple ReLUs. No Evolution changes. |
-| 2026-11-05 | Clang -Wshadow fix in constrained Taylor tests | Source corrected; CI pending | Renamed a local NeuralParameterSnapshot test variable from `two` to `two_neuron_model` to avoid shadowing the existing Ariadne::two constant under Clang -Werror. Test scenarios, coverage, and production code unchanged. |
-| 2026-11-05 | N3 constrained ReLU branching | Source and C++ tests added; CI pending | New constrained_taylor overload returning List<ValidatedConstrainedImageSet>. ReLU branches are guarded by remainder-relaxed parameter constraints, preserve the original Taylor models and branch through subsequent layers. Optional branch cap rejects exponential explosion. Tests cover branch coverage, Taylor error ambiguity, stable signs and cap validation. Constraint solver is not called. |
-| 2026-11-05 | N3 initial: native validated Taylor-model propagation | Source and C++ regression tests added; CI pending | New evaluator.taylor overload for Vector<ValidatedTaylorModelDP>. Affine and all five activation functions reuse existing Function calculus and binary64 singleton bounds; tests cover affine derivatives, remainder propagation, dimension validation and pointwise certified inclusion. ReLU does not split into constrained branches. |
-| 2026-11-04 | Fix Python invalid-box test setup | Test corrected; CI pending | Zero-dimensional FloatDPExactBox now uses the existing dimension constructor (`FloatDPExactBox(0)`) rather than an empty initializer list, which UniformArray rejects before validation. Kept reversed-endpoint rejection and added a nonempty wrong-dimension case; production Numeric and Neurosymbolic code unchanged. |
-| 2026-11-04 | Symbolic expansion semantic regression tests | Source tests updated; CI pending | Replaced inconclusive lazy Real equality with certified FloatDPBounds containment and tightness checks. Replaced structural identity between mathematically equivalent but syntactically distinct sigmoid/softplus trees with multi-point rigorous evaluation comparisons, retaining all five activation cases and independent smooth derivative checks. Production symbolic expansion unchanged. |
-| 2026-11-04 | N1 native ball and bounds propagation | Source, tests and Python bindings committed; CI pending | Added FloatDPBoundsVector and FloatDPBallVector overloads reusing the same FloatDPBounds propagation as the original FloatDPExactBox path. Ball conversion encloses the full radius. No custom interval types or solver calls. |
-| 2026-11-04 | Adopt Expression Set as the mathematical dependency | Implemented in source; CI pending | Replaced the direct Symbolic gitlink with Expression Set, which carries Symbolic and Set (with Linear Programming, Constraint Solving, and Nonlinear Programming transitively). Updated CMake dependency consistency checks, Python binding linkage, documentation and the build graph. No new mathematical types. |
-| 2026-11-04 | Repair existing validated Numeric API usage | Implemented in source; CI pending | Removed the conflicting local BoundsType alias and used FloatDPBounds directly. Constructed binary64 singleton intervals with ExactDouble and dp; changed C++ tests and tutorial to use the public FloatDP(ExactDouble(value),dp) constructor. |
-| 2026-11-04 | Pin Symbolic activation evaluation test correction | Implemented; CI pending | Updated ss/sym to symbolic d17d699a, correcting a test that compared Real expression trees structurally instead of checking rigorous numeric enclosure of evaluated sigmoid(0) and softplus(0). The mathematical APIs and symbolic activation support are unchanged. |\n| 2026-11-04 | Restore all five symbolic neural activations | Implemented; CI pending | Pinned ss/sym to Symbolic commit 7115fe33, which exposes sigmoid and softplus Expression<Real> functions with equivalent C++ and Python tests. Neurosymbolic now invokes the Symbolic operations directly, supports all five activation types and checks the two expansions and their derivatives against Symbolic reference expressions. |
-| 2026-11-04 | Reuse Ariadne Interval/Box and Numeric activations | Implemented; CI pending | Removed duplicate NeurosymbolicValidatedInterval and switched validated public signatures to FloatDPExactBox -> FloatDPUpperBox. Reused existing FloatDPBounds, make_interval and Numeric tanh/sigmoid/softplus. Symbolic expansion now rejects Sigmoid/Softplus where Expression<Real> lacks the operations instead of locally spelling them as formulas. Updated C++/Python tests, tutorials and README. Old CI was failing on compilation; this revision still needs CI verification. |
-| 2026-11-04 | Repository naming normalization after GitHub rename | Implemented; CI pending | Renamed repository-specific headers, source files, tests, directory paths, public API names, CMake project/targets, find-package module and documentation consistently to neurosymbolic / Neurosymbolic / NEUROSYMBOLIC. Kept upstream Neural and Symbolic type names unchanged. Checked every tracked source/config/document for obsolete neuro-symbolic, neuro_symbolic and NeuroSymbolic spellings. Pre-existing CI failures on earlier commit remain to be diagnosed independently. |
-| 2026-11-04 | N2 expression-kind enumeration correction | Implemented; CI pending | Used the actual Ariadne OperatorKind::NULLARY enumeration for a nonconstant symbolic-expression test; prevents an invalid enum identifier under compiler warnings-as-errors. |
-| 2026-11-04 | N0/N1/N2 standalone bootstrap and first mathematical adapters | Implemented; CI pending | Created CMake, pinned Neural and Symbolic submodules, Configuration and Testing, Python bindings, C++ unit tests, tutorials, install smoke and five CI workflows. Added Numeric FloatDPBounds interval enclosure for five activations with strict bounds and explicit exact binary64 coefficients. Added C++ Symbolic Expression<Real> expansion and differentiation interoperability. Tests include analytic affine corners, sample inclusion, invalid inputs, symbolic coefficient and variable validation. The new repository has no Reasoning dependency; Neural remains unchanged. Final compiler/CI evidence is pending. |
+| `bounds` | `FloatDPExactBox` | `FloatDPUpperBox` | Validated interval enclosure |
+| `bounds` | `FloatDPBoundsVector` | `FloatDPBoundsVector` | Validated interval enclosure |
+| `bounds` | `FloatDPBallVector` | `FloatDPBoundsVector` | Rigorous ball-to-bounds, then interval propagation |
+| `taylor` | `Vector<ValidatedTaylorModelDP>` | Same vector type | Direct validated Taylor propagation |
+| `constrained_taylor` | Taylor-model vector | **One** `ValidatedConstrainedImageSet` | Default implicit constraint representation |
+| `branched_taylor` | Taylor-model vector, branch cap | `List<ValidatedConstrainedImageSet>` | Optional explicit ReLU branches |
+| `neurosymbolic_expand` | Snapshot, distinct `Variable<Real>` inputs | `std::vector<Expression<Real>>` | Symbolic network DAG |
+
+`NeurosymbolicValidatedEvaluator` consumes an immutable
+`NeuralParameterSnapshot`. The three `bounds` overloads and
+`neurosymbolic_validated_bounds` have dedicated Python bindings.
+Taylor propagation, constrained Taylor representations, and
+`neurosymbolic_expand` are currently C++-only at this module boundary.
+
+### 3.1 Bounds and direct Taylor evaluation
+
+All `bounds` overloads share a `FloatDPBounds` evaluator; a ball's full
+radius is retained during conversion. Affine operations and the Numeric
+implementations of `max`, `tanh`, `sigmoid`, and `softplus` are used
+instead of local approximate approximations.
+
+`taylor(input)` directly propagates existing validated Taylor models
+through affine layers and all five activations. It uses Function's
+validated `max` for ReLU; Sigmoid uses `rec(1+exp(-z))`, and Softplus
+uses `log(1+exp(z))`. The input models must have a common parameter
+dimension. Neither evaluator invokes a solver.
+
+### 3.2 Implicit constraints — the default
+
+`constrained_taylor(input)` returns **one**
+`ValidatedConstrainedImageSet`, with no enumeration of activation
+patterns. Its current parameter ordering is:
+
+```text
+(s_0,...,s_{n-1} | x_0,...,x_{d-1} | y_0,...,y_{r-1})
+ original Taylor s    input auxiliaries     ReLU auxiliaries
+```
+
+Here `r` is the total number of ReLU neurons (not merely ambiguous
+ones). The construction has `n+d+r` parameters. The original parameters
+range over the unit box; input and ReLU auxiliary domains use validated
+outward interval bounds. Every input adds the constraint
+
+```text
+-e_i <= x_i - p_i(s) <= e_i.
+```
+
+Each ReLU with preactivation `z` and auxiliary output `y` adds
+
+```text
+y >= 0
+y >= z
+y * (y - z) == 0
+```
+
+At the mathematical real-algebraic level, these three conditions encode
+`y=max(0,z)` with no explicit disjunction. Smooth activations are direct
+functions of the same parameters. The current implementation adds
+`d + 3*r` constraints (one bounded input relation per input, three per
+ReLU), without calling `ConstraintSolver`.
+
+**Output image versus joint input/output graph.** The returned set's
+`function()` maps hidden parameters to *neural outputs only*; the
+`domain()` and `constraints()` preserve the hidden inputs. The joint
+image `(x,N(x))` can be constructed by **existing Function/Set
+composition**, not a new Neurosymbolic wrapper:
+
+```cpp
+auto output_set = evaluator.constrained_taylor(inputs);
+SizeType n = inputs[0].argument_size();
+SizeType d = inputs.size();
+SizeType m = output_set.number_of_parameters();
+
+ValidatedVectorMultivariateFunction input_projection(d, m);
+for (SizeType i = 0; i < d; ++i)
+    input_projection.set(i,
+        ValidatedScalarMultivariateFunction::coordinate(m, n + i));
+
+ValidatedConstrainedImageSet joint(
+    output_set.domain(),
+    join(input_projection, output_set.function()),
+    output_set.constraints());
+```
+
+This construction retains **the same** parameterization and all
+constraints. `join` here concatenates **functions** sharing the same
+arguments. It is *not* `join` of constrained image sets: the latter has
+different preconditions, including no constraints on its input sets.
+`image(set,h)` and `set.apply(h)` post-compose the existing output
+mapping; they cannot retrieve hidden input coordinates from that mapping
+alone. The parameter order shown is the current internal convention:
+cross-repository consumers relying on it need explicit regression tests.
+
+### 3.3 Explicit branches — optional
+
+`branched_taylor(input,max_branches)` maintains Taylor models on the
+original parameter box. A ReLU with a certified sign does not split; an
+ambiguous ReLU creates active and inactive branches. Exceeding the
+configured cap throws `std::length_error`, not a silent union/merge.
+
+For a preactivation `z(s) in p(s)+[-e,e]`, the implemented **necessary**
+guards are
+
+```text
+active:   p(s) >= -e     -> propagate the preactivation Taylor model
+inactive: p(s) <= +e     -> propagate zero
+```
+
+They account for the Taylor remainder but can overlap, retain infeasible
+activation patterns, and permit spurious output values on a branch.
+Especially for `e>0`, they are **not** equivalent to the exact ReLU
+complementarity relation of the implicit model. The result is a sound
+outer representation intended for comparison and optional refinement;
+it may grow exponentially. Neither mode invokes a solver automatically.
+Separate method names are intentional because their existing result
+types differ; no new variant or wrapper is needed.
+
+### 3.4 Solver semantics
+
+A `ValidatedConstrainedImageSet` is defined without solving its
+constraints. In Set, `reduce()` invokes `ConstraintSolver` and tries
+to shrink `reduced_domain()`; `domain()`, `function()`, and the
+stored constraints remain unchanged.
+
+**Caution:** `is_empty()` currently calls `reduce()` internally
+(and does so through a `const` interface). Thus it can invoke the
+solver and change the reduced domain; it is not a cheap read-only
+query. Solver results may be inconclusive on nonconvex complementarity
+constraints. Reduction is not a general feasibility/completeness
+guarantee and must not be claimed to remove all infeasible branches.
+
+## 4. Verification: evidence versus gaps
+
+**Reference baseline:** all five workflows — Ubuntu, macOS, Windows,
+Sanitizers, and Coverage — passed for `953d1a8`. This validates the
+current regression suite in its CI environments, **not** the full
+mathematical soundness/completeness of the model.
+
+Existing regression suites exercise:
+
+- Bounds and Ball paths, affine examples, invalid inputs, and all
+  activations (`tests/test_validated.cpp` and Python tests).
+- Exact coefficients, symbolic evaluation, selected derivatives, and
+  expression validation (`tests/test_symbolic.cpp`).
+- Direct Taylor affine dependency, derivatives, remainder enclosure,
+  and all activations (`tests/test_taylor.cpp`).
+- Implicit graph construction for small ReLU cases, the kink, nonzero
+  Taylor remainder, and a two-ReLU example.
+- Explicit branch coverage, stable signs, remainder-relaxed guards,
+  and the branch cap.
+
+**Open verification gaps:**
+
+1. Negative semantic tests that exclude impossible input/activation/output
+   assignments, beyond checking that known valid witnesses satisfy the
+   constraints. Include deeper networks and correlated inputs.
+2. Feasible, infeasible, and undecidable/inconclusive exercises of
+   `reduce()` and `is_empty()`, with checks that no admissible witness
+   is excluded by refinement.
+3. Independent comparisons of implicit and explicit modes, accounting
+   for their **different** set semantics when Taylor remainders are
+   nonzero. Do not assert equality merely because sampled outputs match.
+4. Reproducible performance/memory benchmarks for construction and
+   optional solver reduction as depth, width, ReLU ambiguity, and Taylor
+   remainder size change.
+5. A downstream end-to-end controlled-dynamics example preserving the
+   coupled state/control parameterization. This is not yet a
+   Neurosymbolic feature and must not force a dependency on Evolution.
+
+## 5. Next work and acceptance gate
+
+The next phase is **validation and benchmarking**, not adding new
+Neurosymbolic abstractions.
+
+1. **Semantic oracles:** small deterministic affine/one-ReLU/multilayer
+   networks, including boundary cases and nonzero Taylor remainders.
+   Verify both valid witnesses and provably forbidden assignments,
+   preferably against independent analytic or dyadic references.
+   Numerical sampling alone cannot certify global inclusion.
+2. **Solver characterization:** test `reduce()` and `is_empty()` on
+   known satisfiable, unsatisfiable, and inconclusive cases. Record
+   reductions, solver time, and any inability to decide; preserve
+   admissible cases and investigate every discrepancy.
+3. **Strategy benchmarks:** compare implicit versus explicit results
+   under their actual semantics, with timing, memory, parameter count,
+   constraint count, branch count, and bounding quality. Include
+   networks in which many ReLUs have uncertain signs.
+4. **Downstream composition after validation:** use Function's
+   function-level `join` and Set's constrained-image constructors to
+   build the coupled graph for a minimal controlled dynamical system.
+   Integrate with `evolution` only after the relation has been
+   independently validated; do not introduce composition into
+   Neurosymbolic without a demonstrated missing primitive.
+
+**Exit criteria:** strong semantic inclusion/exclusion checks,
+documented solver behaviour (including inconclusive outcomes), and
+reproducible comparative benchmarks. Green CI or coverage alone is
+insufficient.
+
+## 6. Implementation history (condensed)
+
+| Date | Milestone | Current significance |
+| --- | --- | --- |
+| 2026-11-04 | Standalone project, Numeric bounds and Symbolic expansion | Frozen Neural inputs, binary64-exact parameters, five activations |
+| 2026-11-04 | Dependency consolidation | `expression-set` provides Symbolic/Function and Set/solver facilities |
+| 2026-11-04 | Ball/Bounds support and regression corrections | Reuse of native Numeric types; no duplicate interval wrappers |
+| 2026-11-05 | Direct validated Taylor propagation | Native `taylor()` with shared parameters and validated remainders |
+| 2026-11-05 | Explicit ReLU branching | `branched_taylor()` retained as a bounded, potentially loose alternative |
+| 2026-11-05 | Implicit ReLU constraints as default | `constrained_taylor()` returns one constrained image with complementarity |
+| 2026-11-05 | Baseline established | All five GitHub Actions workflows passed at `953d1a8` |
+
+Superseded APIs, test repairs, and intermediate failed CI runs are
+preserved in Git history, not repeated as active design requirements.
+
+**Source index:** `include/neurosymbolic/validated.hpp`,
+`include/neurosymbolic/symbolic.hpp`, `src/validated.cpp`,
+`src/taylor.cpp`, `src/symbolic.cpp`,
+`tests/test_validated.cpp`, `tests/test_symbolic.cpp`,
+`tests/test_taylor.cpp`, and Set's `include/set/function_set.hpp`
+and `src/function_set.cpp`.
