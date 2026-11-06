@@ -7,9 +7,8 @@
 [![Coverage Status](https://github.com/ariadne-cps/neural-set/actions/workflows/coverage.yml/badge.svg)](https://github.com/ariadne-cps/neural-set/actions/workflows/coverage.yml)
 [![codecov](https://codecov.io/gh/ariadne-cps/neural-set/branch/main/graph/badge.svg)](https://codecov.io/gh/ariadne-cps/neural-set)
 
-Ariadne Neural Set connects immutable trained ANN snapshots to Ariadne's
-validated Numeric, Function and Set capabilities. ANN independently owns
-network topology, native CPU inference, derivatives, training, and persistence.
+Ariadne Neural Set provides rigorous bounds, validated Taylor-model evaluation
+and constrained image-set representations for immutable ANN snapshots.
 
 ## Dependencies
 
@@ -23,9 +22,8 @@ neural-set
             +-- nonlinear-programming ... function, numeric
 ```
 
-The direct production dependencies are `ann` and `set`. All shared
-Build and Testing submodule revisions are checked by CMake. The ANN
-library does not depend on Set, Function, or Symbolic.
+The direct production dependencies are `ann` and `set`. Shared Build and
+Testing submodule revisions are checked by CMake.
 
 ## Validated operations
 
