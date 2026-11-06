@@ -10,7 +10,6 @@
 Ariadne Neural Set connects immutable trained ANN snapshots to Ariadne's
 validated Numeric, Function and Set capabilities. ANN independently owns
 network topology, native CPU inference, derivatives, training, and persistence.
-Neural Set neither owns training nor expands networks symbolically.
 
 ## Dependencies
 
@@ -59,15 +58,6 @@ auto implicit_relu = evaluator.constrained_taylor(taylor_inputs);
 auto branches = evaluator.branched_taylor(taylor_inputs, 1024u);
 ```
 
-## Scope
-
-Neural Set provides validated evaluation and set representations but does
-not yet provide a general `EffectiveVectorMultivariateFunction` adapter
-for `System::VectorField`. That separate interoperability work must
-preserve mathematical composition without expanding neural networks.
-Symbolic expansion was removed from this repository; the planned owner
-for optional proof-oriented expansion is `reasoning`.
-
 ## Build and test
 
 ```sh
@@ -84,4 +74,4 @@ is `ariadne-neural-set`, the interface target is `neural_set`, and the
 standalone Python module is `pyariadne_neural_set`.
 Standalone C++ and Python examples are in [tutorial/](tutorial/README.md).
 See the [design journal](doc/neural_set_design.md) for mathematical contracts,
-limitations and the migration history.
+implementation details and the migration history.
