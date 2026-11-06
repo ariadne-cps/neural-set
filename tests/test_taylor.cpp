@@ -6,23 +6,23 @@
  ****************************************************************************/
 
 /*
- *  This file is part of Ariadne Neurosymbolic.
+ *  This file is part of Ariadne Neural Set.
  *
- *  Ariadne Neurosymbolic is free software: you can redistribute it and/or
+ *  Ariadne Neural Set is free software: you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License as published
  *  by the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  Ariadne Neurosymbolic is distributed in the hope that it will be useful,
+ *  Ariadne Neural Set is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with Ariadne Neurosymbolic. If not, see <https://www.gnu.org/licenses/>.
+ *  along with Ariadne Neural Set. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "ariadne-neurosymbolic.hpp"
+#include "ariadne-neural-set.hpp"
 #include "ariadne-testing.hpp"
 #include "algebra/sweeper.hpp"
 #include "numeric/builtin.hpp"
@@ -43,7 +43,7 @@ public:
         NeuralParameterSnapshot model(
             NeuralNetwork(2,{{1,NeuralActivation::Identity}}),
             {2.0,-3.0,0.5});
-        NeurosymbolicValidatedEvaluator evaluator(model);
+        NeuralValidatedEvaluator evaluator(model);
         Vector<ValidatedTaylorModelDP> input{x,y};
         auto const output=evaluator.taylor(input);
         ARIADNE_TESTING_EXPECT_EQUAL(output.size(),SizeType{1});
@@ -84,7 +84,7 @@ public:
                                 NeuralActivation::Softplus}) {
             NeuralParameterSnapshot model(
                 NeuralNetwork(1,{{1,activation}}),{1.0,0.0});
-            NeurosymbolicValidatedEvaluator evaluator(model);
+            NeuralValidatedEvaluator evaluator(model);
             auto const output=evaluator.taylor(Vector<ValidatedTaylorModelDP>{x});
             ARIADNE_TESTING_EXPECT_EQUAL(output.size(),SizeType{1});
             ARIADNE_TESTING_EXPECT_EQUAL(output[0].argument_size(),SizeType{1});
@@ -116,7 +116,7 @@ public:
         auto const x=ValidatedTaylorModelDP::coordinate(1u,0u,swp);
         NeuralParameterSnapshot model(
             NeuralNetwork(1,{{1,NeuralActivation::Relu}}),{1.0,0.0});
-        NeurosymbolicValidatedEvaluator evaluator(model);
+        NeuralValidatedEvaluator evaluator(model);
         auto const branches=evaluator.branched_taylor(Vector<ValidatedTaylorModelDP>{x});
         ARIADNE_TESTING_EXPECT_EQUAL(branches.size(),SizeType{2});
         for (auto const& branch : branches) {
@@ -155,7 +155,7 @@ public:
         x.set_error(1u);
         NeuralParameterSnapshot model(
             NeuralNetwork(1,{{1,NeuralActivation::Relu}}),{1.0,0.0});
-        auto const branches=NeurosymbolicValidatedEvaluator(model).branched_taylor(
+        auto const branches=NeuralValidatedEvaluator(model).branched_taylor(
             Vector<ValidatedTaylorModelDP>{x});
         ARIADNE_TESTING_EXPECT_EQUAL(branches.size(),SizeType{2});
         // At parameter s=+0.5 an admissible input is s-1=-0.5.
@@ -176,14 +176,14 @@ public:
         auto const x=ValidatedTaylorModelDP::coordinate(1u,0u,swp);
         NeuralParameterSnapshot stable(
             NeuralNetwork(1,{{1,NeuralActivation::Relu}}),{1.0,3.0});
-        auto const stable_branches=NeurosymbolicValidatedEvaluator(stable).branched_taylor(
+        auto const stable_branches=NeuralValidatedEvaluator(stable).branched_taylor(
             Vector<ValidatedTaylorModelDP>{x});
         ARIADNE_TESTING_EXPECT_EQUAL(stable_branches.size(),SizeType{1});
         ARIADNE_TESTING_EXPECT_EQUAL(stable_branches[0].number_of_constraints(),SizeType{0});
         NeuralParameterSnapshot two_neuron_model(
             NeuralNetwork(1,{{2,NeuralActivation::Relu}}),
             {1.0,-1.0,0.0,0.0});
-        NeurosymbolicValidatedEvaluator evaluator(two_neuron_model);
+        NeuralValidatedEvaluator evaluator(two_neuron_model);
         auto const branches=evaluator.branched_taylor(Vector<ValidatedTaylorModelDP>{x},4u);
         ARIADNE_TESTING_EXPECT_EQUAL(branches.size(),SizeType{4});
         for (auto const& branch : branches)
@@ -198,7 +198,7 @@ public:
         auto const x=ValidatedTaylorModelDP::coordinate(1u,0u,swp);
         NeuralParameterSnapshot model(
             NeuralNetwork(1,{{1,NeuralActivation::Relu}}),{1.0,0.0});
-        NeurosymbolicValidatedEvaluator evaluator(model);
+        NeuralValidatedEvaluator evaluator(model);
         auto const graph=evaluator.constrained_taylor(
             Vector<ValidatedTaylorModelDP>{x});
         // Parameters: Taylor coordinate s, uncertain input x, ReLU output y.
@@ -235,7 +235,7 @@ public:
         uncertain.set_error(1u);
         NeuralParameterSnapshot one(
             NeuralNetwork(1,{{1,NeuralActivation::Relu}}),{1.0,0.0});
-        auto const graph=NeurosymbolicValidatedEvaluator(one).constrained_taylor(
+        auto const graph=NeuralValidatedEvaluator(one).constrained_taylor(
             Vector<ValidatedTaylorModelDP>{uncertain});
         ARIADNE_TESTING_EXPECT_EQUAL(graph.number_of_constraints(),SizeType{4});
         // At s=+0.5, the remainder permits both x=+0.5 and x=-0.5.
@@ -258,7 +258,7 @@ public:
         NeuralParameterSnapshot two_neuron_model(
             NeuralNetwork(1,{{2,NeuralActivation::Relu}}),
             {1.0,-1.0,0.0,0.0});
-        auto const two_graph=NeurosymbolicValidatedEvaluator(two_neuron_model)
+        auto const two_graph=NeuralValidatedEvaluator(two_neuron_model)
             .constrained_taylor(Vector<ValidatedTaylorModelDP>{uncertain});
         ARIADNE_TESTING_EXPECT_EQUAL(two_graph.number_of_parameters(),SizeType{4});
         ARIADNE_TESTING_EXPECT_EQUAL(two_graph.number_of_constraints(),SizeType{7});
@@ -272,7 +272,7 @@ public:
         NeuralParameterSnapshot model(
             NeuralNetwork(1,{{1,NeuralActivation::Identity}}),
             {2.0,0.5});
-        auto const output=NeurosymbolicValidatedEvaluator(model).taylor(
+        auto const output=NeuralValidatedEvaluator(model).taylor(
             Vector<ValidatedTaylorModelDP>{uncertain});
         auto const value=evaluate(output[0],
             Vector<FloatDPBounds>{FloatDPBounds(0,dp)});

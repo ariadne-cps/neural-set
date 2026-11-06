@@ -1,28 +1,28 @@
 /***************************************************************************
- *            tutorial/tutorial_neurosymbolic.cpp
+ *            tutorial/tutorial_neural_set.cpp
  *
  *  Copyright  2026  Luca Geretti
  *
  ****************************************************************************/
 
 /*
- *  This file is part of Ariadne Neurosymbolic.
+ *  This file is part of Ariadne Neural Set.
  *
- *  Ariadne Neurosymbolic is free software: you can redistribute it and/or
+ *  Ariadne Neural Set is free software: you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License as published
  *  by the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  Ariadne Neurosymbolic is distributed in the hope that it will be useful,
+ *  Ariadne Neural Set is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with Ariadne Neurosymbolic. If not, see <https://www.gnu.org/licenses/>.
+ *  along with Ariadne Neural Set. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "ariadne-neurosymbolic.hpp"
+#include "ariadne-neural-set.hpp"
 #include "algebra/sweeper.hpp"
 #include "numeric/builtin.hpp"
 #include "numeric/floats.hpp"
@@ -34,13 +34,13 @@
 using namespace Ariadne;
 
 int main() {
-    std::cout << "Neurosymbolic " << neurosymbolic_version() << '\n';
+    std::cout << "NeuralSet " << neural_set_version() << '\n';
 
     // 1. A smooth frozen network. Every stored binary64 coefficient denotes
-    //    its exact dyadic real value in the validated and symbolic paths.
+    //    its exact dyadic real value in validated evaluation.
     NeuralParameterSnapshot smooth(
         NeuralNetwork(1,{{1,NeuralActivation::Tanh}}),{2.0,0.0});
-    NeurosymbolicValidatedEvaluator smooth_evaluator(smooth);
+    NeuralValidatedEvaluator smooth_evaluator(smooth);
     FloatDPExactBox input_box({
         FloatDPExactInterval(
             FloatDP(ExactDouble(-1.0),dp),
@@ -72,7 +72,7 @@ int main() {
     //    complementarity relation y>=0, y>=z, y*(y-z)==0.
     NeuralParameterSnapshot relu(
         NeuralNetwork(1,{{1,NeuralActivation::Relu}}),{1.0,0.0});
-    NeurosymbolicValidatedEvaluator relu_evaluator(relu);
+    NeuralValidatedEvaluator relu_evaluator(relu);
     auto const implicit=relu_evaluator.constrained_taylor(
         Vector<ValidatedTaylorModelDP>{x});
     std::cout << "Implicit ReLU parameters: "
@@ -92,21 +92,13 @@ int main() {
     // Neither method invokes ConstraintSolver automatically. A caller may
     // explicitly use reduce() on a constrained image set when needed.
 
-    // 6. Symbolic expansion returns existing Expression<Real> objects.
-    //    Differentiation is shown only for the smooth Tanh network.
-    RealVariable variable("x");
-    auto const expressions=neurosymbolic_expand(smooth,{variable});
-    auto const derivative_expression=derivative(expressions.at(0),variable);
-    std::cout << "Symbolic outputs: " << expressions.size() << '\n';
-    std::cout << "Symbolic derivative: " << derivative_expression << '\n';
-
-    // 7. All five Neural activations work with validated bounds.
+    // 6. All five Neural activations work with validated bounds.
     for (auto activation : {NeuralActivation::Identity,NeuralActivation::Relu,
                             NeuralActivation::Tanh,NeuralActivation::Sigmoid,
                             NeuralActivation::Softplus}) {
         NeuralParameterSnapshot model(
             NeuralNetwork(1,{{1,activation}}),{1.0,0.0});
-        auto const outputs=NeurosymbolicValidatedEvaluator(model).bounds(bounds_input);
+        auto const outputs=NeuralValidatedEvaluator(model).bounds(bounds_input);
         std::cout << "Activation enclosure: " << outputs << '\n';
     }
     return 0;

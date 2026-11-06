@@ -1,10 +1,7 @@
-if(NOT TARGET neural)
-    ariadne_add_submodule(neural)
+if(NOT TARGET ann)
+    ariadne_add_submodule(ann)
 endif()
-
-if(NOT TARGET expression_set)
-    ariadne_add_submodule(expression-set)
+if(NOT TARGET set)
+    ariadne_add_submodule(set)
 endif()
-
-# Testing remains a test-only dependency.
 ariadne_setup_testing()

@@ -1,28 +1,28 @@
 /***************************************************************************
- *            include/neurosymbolic/validated.hpp
+ *            include/neural-set/validated.hpp
  *
  *  Copyright  2026  Luca Geretti
  *
  ****************************************************************************/
 
 /*
- *  This file is part of Ariadne Neurosymbolic.
+ *  This file is part of Ariadne Neural Set.
  *
- *  Ariadne Neurosymbolic is free software: you can redistribute it and/or
+ *  Ariadne Neural Set is free software: you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License as published
  *  by the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  Ariadne Neurosymbolic is distributed in the hope that it will be useful,
+ *  Ariadne Neural Set is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with Ariadne Neurosymbolic. If not, see <https://www.gnu.org/licenses/>.
+ *  along with Ariadne Neural Set. If not, see <https://www.gnu.org/licenses/>.
  */
 
-/** @file neurosymbolic/validated.hpp
+/** @file neural-set/validated.hpp
  *  @brief Rigorous interval output enclosures of frozen neural networks.
  *
  *  Accepts native FloatDPBoundsVector, FloatDPBallVector or FloatDPExactBox.
@@ -31,10 +31,10 @@
  *  Unlike Neural's NativeCpu backend, this evaluator uses Ariadne Numeric's
  *  outwardly rounded FloatDPBounds operations without approximate fallbacks.
  */
-#ifndef ARIADNE_NEUROSYMBOLIC_VALIDATED_HPP
-#define ARIADNE_NEUROSYMBOLIC_VALIDATED_HPP
+#ifndef ARIADNE_NEURAL_SET_VALIDATED_HPP
+#define ARIADNE_NEURAL_SET_VALIDATED_HPP
 
-#include "neural/network.hpp"
+#include "ann/network.hpp"
 #include "geometry/box.hpp"
 #include "algebra/vector.hpp"
 #include "algebra/linear_algebra.decl.hpp"
@@ -52,9 +52,9 @@ namespace Ariadne {
  *  The mathematical meaning is exact binary64 coefficients and real inputs
  *  within the closed input box (not bitwise CPU inference semantics).
  */
-class NeurosymbolicValidatedEvaluator {
+class NeuralValidatedEvaluator {
 public:
-    explicit NeurosymbolicValidatedEvaluator(NeuralParameterSnapshot snapshot);
+    explicit NeuralValidatedEvaluator(NeuralParameterSnapshot snapshot);
 
     /** @brief Immutable snapshot used by the evaluator. */
     NeuralParameterSnapshot const& snapshot() const noexcept;
@@ -104,10 +104,10 @@ private:
 };
 
 /** @brief Convenience wrapper for one validated evaluation. */
-FloatDPUpperBox neurosymbolic_validated_bounds(
+FloatDPUpperBox neural_validated_bounds(
     NeuralParameterSnapshot const& snapshot,
     FloatDPExactBox const& input_box);
 
 } // namespace Ariadne
 
-#endif // ARIADNE_NEUROSYMBOLIC_VALIDATED_HPP
+#endif // ARIADNE_NEURAL_SET_VALIDATED_HPP

@@ -1,12 +1,12 @@
 [submodule "bui"]
 	path = ss/bui
 	url = https://github.com/ariadne-cps/build
-[submodule "neu"]
-	path = ss/neu
-	url = https://github.com/ariadne-cps/neural
-[submodule "exp"]
-	path = ss/exp
-	url = https://github.com/ariadne-cps/expression-set
+[submodule "ann"]
+	path = ss/ann
+	url = https://github.com/ariadne-cps/ann
+[submodule "set"]
+	path = ss/set
+	url = https://github.com/ariadne-cps/set
 [submodule "tst"]
 	path = ss/tst
 	url = https://github.com/ariadne-cps/testing

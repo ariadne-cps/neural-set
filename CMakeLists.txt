@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(Neurosymbolic VERSION 0.1.0)
+project(NeuralSet VERSION 0.1.0)
 
 option(WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 option(BUILD_PYTHON_BINDINGS "Build Python bindings" ON)
@@ -18,24 +18,9 @@ endif()
 
 if(EXISTS "${PROJECT_SOURCE_DIR}/.git")
     require_same_dependency_commit(Build CHAINS
-        "build"
-        "neural|build"
-        "expression-set|build"
-        "expression-set|set|build"
-        "expression-set|symbolic|build"
-        "testing|build"
-    )
-    require_same_dependency_commit(Function CHAINS
-        "expression-set|symbolic|function"
-        "expression-set|set|constraint-solving|nonlinear-programming|function"
-    )
+        "build" "ann|build" "set|build" "testing|build")
     require_same_dependency_commit(Testing CHAINS
-        "testing"
-        "neural|testing"
-        "expression-set|testing"
-        "expression-set|symbolic|testing"
-        "expression-set|set|testing"
-    )
+        "testing" "ann|testing" "set|testing")
 endif()
 
 setup_project()
@@ -44,30 +29,30 @@ include_directories("${PROJECT_SOURCE_DIR}/include")
 add_subdirectory(ss)
 
 # The CMake identifier omits '-' to match generated Python C++ entry points.
-add_library(neurosymbolic INTERFACE)
-target_include_directories(neurosymbolic INTERFACE
+add_library(neural_set INTERFACE)
+target_include_directories(neural_set INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include/ariadne-neurosymbolic>
+    $<INSTALL_INTERFACE:include/ariadne-neural-set>
 )
-target_link_libraries(neurosymbolic INTERFACE neural expression_set)
+target_link_libraries(neural_set INTERFACE ann set)
 
 add_subdirectory(src)
-target_link_libraries(NEUROSYMBOLIC_SRC PRIVATE neurosymbolic)
+target_link_libraries(NEURAL_SET_SRC PRIVATE neural_set)
 
 ariadne_register_public_headers(
-    TARGET neurosymbolic
-    DIRECTORIES "${PROJECT_SOURCE_DIR}/include/neurosymbolic"
-    FILES "${PROJECT_SOURCE_DIR}/include/ariadne-neurosymbolic.hpp"
+    TARGET neural_set
+    DIRECTORIES "${PROJECT_SOURCE_DIR}/include/neural-set"
+    FILES "${PROJECT_SOURCE_DIR}/include/ariadne-neural-set.hpp"
 )
 
 setup_project_library(
-    TARGET ariadne-neurosymbolic
-    OBJECTS NEUROSYMBOLIC_SRC
-    LINK_LIBRARIES neurosymbolic
+    TARGET ariadne-neural-set
+    OBJECTS NEURAL_SET_SRC
+    LINK_LIBRARIES neural_set
 )
 
 setup_standalone_project_tests(
-    TARGET ariadne-neurosymbolic
+    TARGET ariadne-neural-set
     TEST_DIRECTORY tests
     TEST_TARGET tests
     SOURCES
@@ -81,7 +66,7 @@ endif()
 
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     ariadne_install_dependency_bundle(
-        TARGET neurosymbolic
-        DESTINATION include/ariadne-neurosymbolic
+        TARGET neural_set
+        DESTINATION include/ariadne-neural-set
     )
 endif()

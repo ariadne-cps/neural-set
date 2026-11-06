@@ -1,23 +1,26 @@
-# Neurosymbolic — design and verification journal
+# Neural Set — design and verification journal
 
-**Reference:** `main@953d1a8464b2b09c2fa479b64e97317a25891e24` (2026-11-05).
+**Historical baseline:** `main@953d1a8464b2b09c2fa479b64e97317a25891e24` (2026-11-05).
+**Current repository:** `ariadne-cps/neural-set`; see the 2026-11-06 migration entry.
 This document separates the current mathematical contract, implementation,
 known limitations, validation plan, and historical decisions. Source code and
 tests remain authoritative; this is not a record of superseded CI failures.
 
 ## 1. Purpose and architectural boundaries
 
-Neurosymbolic is the **mathematical adapter for frozen Neural snapshots**.
-Neural owns topology, training, serialization, portable CPU inference, and
-native backend selection. Neurosymbolic owns rigorous numerical evaluation,
-symbolic expansion, and constraint-based mathematical representations.
-The reserved `AriadneValidated` backend in Neural is not activated here.
+Neural Set is the validated mathematical adapter for immutable snapshots
+from [ANN](https://github.com/ariadne-cps/ann). ANN owns training, native
+CPU inference, network topology and serialization. Neural Set provides
+rigorous bounds, validated Taylor evaluation and constrained image-set
+representations. It does not symbolically expand networks.
 
-Direct dependencies are `neural` and `expression-set`. The latter
-transitively includes `symbolic` (and `function`) and `set` (with
-`linear-programming`, `constraint-solving`, and `nonlinear-programming`).
-`build` and `testing` provide infrastructure. CMake checks the consistency
-of shared Build, Function, and Testing dependency commits.
+**Direct production dependencies:** `ann` and `set`; Function, Numeric
+and Geometry are obtained through Set. Build and Testing remain infrastructure.
+ANN stays independent of Set, Function and Symbolic. The prior symbolic
+expansion implementation and its tests were removed from this repository
+in the 2026-11-06 rename; eventual ownership is in Reasoning, where
+expansion must remain an optional proof-oriented operation, never the
+ordinary evaluation path of System/Evolution.
 
 **Invariants and decisions:**
 
@@ -74,16 +77,15 @@ intermediate enclosures. No derivative is claimed at a ReLU kink.
 | `taylor` | `Vector<ValidatedTaylorModelDP>` | Same vector type | Direct validated Taylor propagation |
 | `constrained_taylor` | Taylor-model vector | **One** `ValidatedConstrainedImageSet` | Default implicit constraint representation |
 | `branched_taylor` | Taylor-model vector, branch cap | `List<ValidatedConstrainedImageSet>` | Optional explicit ReLU branches |
-| `neurosymbolic_expand` | Snapshot, distinct `Variable<Real>` inputs | `std::vector<Expression<Real>>` | Symbolic network DAG |
 
-`NeurosymbolicValidatedEvaluator` consumes an immutable
+`Neural SetValidatedEvaluator` consumes an immutable
 `NeuralParameterSnapshot`. The three `bounds` overloads,
-`neurosymbolic_validated_bounds`, direct Taylor propagation, both
-constrained Taylor strategies, and `neurosymbolic_expand` have Python
+`neural_validated_bounds`, direct Taylor propagation, both
+constrained Taylor strategies have Python
 bindings. Taylor arguments cross the Python boundary as lists of native
 `ValidatedTaylorModelDP` objects; output vectors and branch lists are
-returned as Python lists. Native Function, Set, and Symbolic objects are
-reused rather than re-declared by Neurosymbolic.
+returned as Python lists. Native Function and Set objects are
+reused rather than re-declared by Neural Set.
 
 ### 3.1 Bounds and direct Taylor evaluation
 
@@ -136,7 +138,7 @@ ReLU), without calling `ConstraintSolver`.
 `function()` maps hidden parameters to *neural outputs only*; the
 `domain()` and `constraints()` preserve the hidden inputs. The joint
 image `(x,N(x))` can be constructed by **existing Function/Set
-composition**, not a new Neurosymbolic wrapper:
+composition**, not a new Neural Set wrapper:
 
 ```cpp
 auto output_set = evaluator.constrained_taylor(inputs);
@@ -213,8 +215,6 @@ Existing regression suites exercise:
 
 - Bounds and Ball paths, affine examples, invalid inputs, and all
   activations (`tests/test_validated.cpp` and Python tests).
-- Exact coefficients, symbolic evaluation, selected derivatives, and
-  expression validation (`tests/test_symbolic.cpp`).
 - Direct Taylor affine dependency, derivatives, remainder enclosure,
   and all activations (`tests/test_taylor.cpp`).
 - Implicit graph construction for small ReLU cases, the kink, nonzero
@@ -238,12 +238,12 @@ Existing regression suites exercise:
    remainder size change.
 5. A downstream end-to-end controlled-dynamics example preserving the
    coupled state/control parameterization. This is not yet a
-   Neurosymbolic feature and must not force a dependency on Evolution.
+   Neural Set feature and must not force a dependency on Evolution.
 
 ## 5. Next work and acceptance gate
 
 The next phase is **validation and benchmarking**, not adding new
-Neurosymbolic abstractions.
+Neural Set abstractions.
 
 1. **Semantic oracles:** small deterministic affine/one-ReLU/multilayer
    networks, including boundary cases and nonzero Taylor remainders.
@@ -263,7 +263,7 @@ Neurosymbolic abstractions.
    build the coupled graph for a minimal controlled dynamical system.
    Integrate with `evolution` only after the relation has been
    independently validated; do not introduce composition into
-   Neurosymbolic without a demonstrated missing primitive.
+   Neural Set without a demonstrated missing primitive.
 
 **Exit criteria:** strong semantic inclusion/exclusion checks,
 documented solver behaviour (including inconclusive outcomes), and
@@ -274,8 +274,8 @@ insufficient.
 
 | Date | Milestone | Current significance |
 | --- | --- | --- |
-| 2026-11-04 | Standalone project, Numeric bounds and Symbolic expansion | Frozen Neural inputs, binary64-exact parameters, five activations |
-| 2026-11-04 | Dependency consolidation | `expression-set` provides Symbolic/Function and Set/solver facilities |
+| 2026-11-04 | Standalone project, Numeric bounds and Symbolic expansion | Frozen ANN inputs, binary64-exact parameters, five activations |
+| 2026-11-04 | Dependency consolidation | `set` provides Symbolic/Function and Set/solver facilities |
 | 2026-11-04 | Ball/Bounds support and regression corrections | Reuse of native Numeric types; no duplicate interval wrappers |
 | 2026-11-05 | Direct validated Taylor propagation | Native `taylor()` with shared parameters and validated remainders |
 | 2026-11-05 | Explicit ReLU branching | `branched_taylor()` retained as a bounded, potentially loose alternative |
@@ -286,9 +286,19 @@ insufficient.
 Superseded APIs, test repairs, and intermediate failed CI runs are
 preserved in Git history, not repeated as active design requirements.
 
-**Source index:** `include/neurosymbolic/validated.hpp`,
-`include/neurosymbolic/symbolic.hpp`, `src/validated.cpp`,
-`src/taylor.cpp`, `src/symbolic.cpp`,
-`tests/test_validated.cpp`, `tests/test_symbolic.cpp`,
-`tests/test_taylor.cpp`, and Set's `include/set/function_set.hpp`
-and `src/function_set.cpp`.
+**Current source index:** `include/neural-set/validated.hpp`,
+`include/neural-set/neural_set.hpp`, `src/validated.cpp`,
+`src/taylor.cpp`, `tests/test_validated.cpp`,
+`tests/test_taylor.cpp`, and Set's `include/set/function_set.hpp`.
+
+**2026-11-06 rename and dependency migration:** Moved repository from
+`ariadne-cps/neurosymbolic` to `ariadne-cps/neural-set`. Renamed its
+public C++ and Python module interfaces and test/tutorial entry points.
+Direct dependencies changed from `neural` and `expression-set` to
+`ann` and `set`, preserving the previously pinned Set revision.
+Removed the symbolic-expansion implementation, public header, C++ test
+and Python binding from Neural Set. The earlier implementation can be
+recovered from Git history for a separate move into Reasoning.
+Validated bounds and Taylor/image-set algorithms were not intentionally
+changed. Build, standalone install, C++/Python tests and CI results
+must be checked after this commit.

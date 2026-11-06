@@ -1,32 +1,32 @@
 # /***************************************************************************
-#  *            python/tests/test_neurosymbolic.py
+#  *            python/tests/test_neural_set.py
 #  *
 #  *  Copyright  2026  Luca Geretti
 #  *
 #  ****************************************************************************/
 
 # /*
-#  *  This file is part of Ariadne Neurosymbolic.
+#  *  This file is part of Ariadne Neural Set.
 #  *
-#  *  Ariadne Neurosymbolic is free software: you can redistribute it and/or
+#  *  Ariadne Neural Set is free software: you can redistribute it and/or
 #  *  modify it under the terms of the GNU General Public License as published
 #  *  by the Free Software Foundation, either version 3 of the License, or
 #  *  (at your option) any later version.
 #  *
-#  *  Ariadne Neurosymbolic is distributed in the hope that it will be useful,
+#  *  Ariadne Neural Set is distributed in the hope that it will be useful,
 #  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 #  *  GNU General Public License for more details.
 #  *
 #  *  You should have received a copy of the GNU General Public License
-#  *  along with Ariadne Neurosymbolic. If not, see <https://www.gnu.org/licenses/>.
+#  *  along with Ariadne Neural Set. If not, see <https://www.gnu.org/licenses/>.
 #  */
 
 import math
 
 import pytest
 
-from pyariadne_neurosymbolic import (
+from pyariadne_neural_set import (
     NeuralActivation,
     NeuralDenseLayerSpec,
     NeuralNetwork,
@@ -39,9 +39,9 @@ from pyariadne_neurosymbolic import (
     FloatDPBoundsVector,
     FloatDPBallVector,
     DoublePrecision,
-    NeurosymbolicValidatedEvaluator,
-    neurosymbolic_validated_bounds,
-    neurosymbolic_version,
+    NeuralValidatedEvaluator,
+    neural_validated_bounds,
+    neural_set_version,
     NeuralExecutionSession,
 )
 
@@ -66,7 +66,7 @@ def model(activation):
 
 
 def test_version():
-    assert neurosymbolic_version() == "0.1.0"
+    assert neural_set_version() == "0.1.0"
 
 
 def test_exact_affine_corner_oracle():
@@ -74,7 +74,7 @@ def test_exact_affine_corner_oracle():
         NeuralNetwork(2, [NeuralDenseLayerSpec(1, NeuralActivation.Identity)]),
         [2, -3, 0.5],
     )
-    result = NeurosymbolicValidatedEvaluator(snap).bounds(
+    result = NeuralValidatedEvaluator(snap).bounds(
         box((-1, 2), (4, 5)))
     assert result.dimension() == 1
     low, high = endpoints(result[0])
@@ -91,7 +91,7 @@ def test_exact_affine_corner_oracle():
 ])
 def test_all_activations_contain_points(activation):
     snap = model(activation)
-    bounds = neurosymbolic_validated_bounds(
+    bounds = neural_validated_bounds(
         snap, box((-3, 4)))[0]
     cpu = NeuralExecutionSession(snap)
     low, high = endpoints(bounds)
@@ -109,20 +109,20 @@ def test_bad_input_box():
     # Construct a zero-dimensional box using the dimension constructor.
     # A list-based FloatDPExactBox([]) cannot infer interval precision.
     with pytest.raises(ValueError):
-        neurosymbolic_validated_bounds(snap, FloatDPExactBox(0))
+        neural_validated_bounds(snap, FloatDPExactBox(0))
 
     # Wrong dimension must be rejected even for a valid, nonempty box.
     with pytest.raises(ValueError):
-        neurosymbolic_validated_bounds(snap, box((0, 1), (0, 1)))
+        neural_validated_bounds(snap, box((0, 1), (0, 1)))
 
     # The evaluator must reject reversed endpoints, not normalize them.
     with pytest.raises(ValueError):
-        neurosymbolic_validated_bounds(snap, box((2, 1)))
+        neural_validated_bounds(snap, box((2, 1)))
 
 
 def test_bounds_and_ball_vector_inputs():
     snap = model(NeuralActivation.Identity)
-    evaluator = NeurosymbolicValidatedEvaluator(snap)
+    evaluator = NeuralValidatedEvaluator(snap)
     dp = DoublePrecision()
     interval = FloatDPBounds(FloatDP(-2, dp), FloatDP(3, dp))
     bounds = evaluator.bounds(FloatDPBoundsVector([interval]))

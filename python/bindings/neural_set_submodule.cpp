@@ -1,31 +1,30 @@
 /***************************************************************************
- *            python/bindings/neurosymbolic_submodule.cpp
+ *            python/bindings/neural_set_submodule.cpp
  *
  *  Copyright  2026  Luca Geretti
  *
  ****************************************************************************/
 
 /*
- *  This file is part of Ariadne Neurosymbolic.
+ *  This file is part of Ariadne Neural Set.
  *
- *  Ariadne Neurosymbolic is free software: you can redistribute it and/or
+ *  Ariadne Neural Set is free software: you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License as published
  *  by the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  Ariadne Neurosymbolic is distributed in the hope that it will be useful,
+ *  Ariadne Neural Set is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with Ariadne Neurosymbolic. If not, see <https://www.gnu.org/licenses/>.
+ *  along with Ariadne Neural Set. If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "pybind11.hpp"
-#include "neurosymbolic/neurosymbolic.hpp"
-#include "neurosymbolic/validated.hpp"
-#include "neurosymbolic/symbolic.hpp"
+#include "neural-set/neural_set.hpp"
+#include "neural-set/validated.hpp"
 
 #include <stdexcept>
 #include <vector>
@@ -63,37 +62,34 @@ pybind11::list constrained_sets_to_python(List<ValidatedConstrainedImageSet> con
 
 } // namespace
 
-void neurosymbolic_submodule(pybind11::module& module) {
-    module.def("neurosymbolic_version", &neurosymbolic_version);
+void neural_set_submodule(pybind11::module& module) {
+    module.def("neural_set_version", &neural_set_version);
 
-    pybind11::class_<NeurosymbolicValidatedEvaluator>(module, "NeurosymbolicValidatedEvaluator")
+    pybind11::class_<NeuralValidatedEvaluator>(module, "NeuralValidatedEvaluator")
         .def(pybind11::init<NeuralParameterSnapshot>(),pybind11::arg("snapshot"))
         .def("bounds",pybind11::overload_cast<FloatDPExactBox const&>(
-            &NeurosymbolicValidatedEvaluator::bounds,pybind11::const_),pybind11::arg("input_box"))
+            &NeuralValidatedEvaluator::bounds,pybind11::const_),pybind11::arg("input_box"))
         .def("bounds",pybind11::overload_cast<FloatDPBoundsVector const&>(
-            &NeurosymbolicValidatedEvaluator::bounds,pybind11::const_),pybind11::arg("input_bounds"))
+            &NeuralValidatedEvaluator::bounds,pybind11::const_),pybind11::arg("input_bounds"))
         .def("bounds",pybind11::overload_cast<FloatDPBallVector const&>(
-            &NeurosymbolicValidatedEvaluator::bounds,pybind11::const_),pybind11::arg("input_balls"))
-        .def("taylor",[](NeurosymbolicValidatedEvaluator const& evaluator,
+            &NeuralValidatedEvaluator::bounds,pybind11::const_),pybind11::arg("input_balls"))
+        .def("taylor",[](NeuralValidatedEvaluator const& evaluator,
                            pybind11::list const& inputs) {
             return taylor_models_to_python(evaluator.taylor(taylor_models_from_python(inputs)));
         },pybind11::arg("inputs"))
-        .def("constrained_taylor",[](NeurosymbolicValidatedEvaluator const& evaluator,
+        .def("constrained_taylor",[](NeuralValidatedEvaluator const& evaluator,
                                        pybind11::list const& inputs) {
             return evaluator.constrained_taylor(taylor_models_from_python(inputs));
         },pybind11::arg("inputs"))
-        .def("branched_taylor",[](NeurosymbolicValidatedEvaluator const& evaluator,
+        .def("branched_taylor",[](NeuralValidatedEvaluator const& evaluator,
                                     pybind11::list const& inputs, SizeType max_branches) {
             return constrained_sets_to_python(
                 evaluator.branched_taylor(taylor_models_from_python(inputs),max_branches));
         },pybind11::arg("inputs"),pybind11::arg("max_branches")=1024u);
 
-    module.def("neurosymbolic_validated_bounds",
-        &neurosymbolic_validated_bounds,
+    module.def("neural_validated_bounds",
+        &neural_validated_bounds,
         pybind11::arg("snapshot"),pybind11::arg("input_box"));
 
-    // Reuse Symbolic's existing RealVariable and RealExpression bindings.
-    // The standard pybind11 STL casters provide list/vector conversion.
-    module.def("neurosymbolic_expand", &neurosymbolic_expand,
-        pybind11::arg("snapshot"),pybind11::arg("input_variables"));
+
 }

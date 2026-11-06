@@ -6,23 +6,23 @@
  ****************************************************************************/
 
 /*
- *  This file is part of Ariadne Neurosymbolic.
+ *  This file is part of Ariadne Neural Set.
  *
- *  Ariadne Neurosymbolic is free software: you can redistribute it and/or
+ *  Ariadne Neural Set is free software: you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License as published
  *  by the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  Ariadne Neurosymbolic is distributed in the hope that it will be useful,
+ *  Ariadne Neural Set is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with Ariadne Neurosymbolic. If not, see <https://www.gnu.org/licenses/>.
+ *  along with Ariadne Neural Set. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "neurosymbolic/validated.hpp"
+#include "neural-set/validated.hpp"
 #include "numeric/builtin.hpp"
 #include "function/taylor_function.hpp"
 
@@ -61,7 +61,7 @@ ValidatedTaylorModelDP activate_taylor(
 
 } // namespace
 
-Vector<ValidatedTaylorModelDP> NeurosymbolicValidatedEvaluator::taylor(
+Vector<ValidatedTaylorModelDP> NeuralValidatedEvaluator::taylor(
     Vector<ValidatedTaylorModelDP> const& input) const {
     auto const& network=snapshot_.network();
     if (input.size()!=network.input_dimension())
@@ -135,7 +135,7 @@ ValidatedConstraint relu_parameter_guard(
 } // namespace
 
 List<ValidatedConstrainedImageSet>
-NeurosymbolicValidatedEvaluator::branched_taylor(
+NeuralValidatedEvaluator::branched_taylor(
     Vector<ValidatedTaylorModelDP> const& input,
     SizeType max_branches) const {
     auto const& network=snapshot_.network();
@@ -267,7 +267,7 @@ ValidatedScalarMultivariateFunction polynomial_of_taylor(
 
 } // namespace
 
-ValidatedConstrainedImageSet NeurosymbolicValidatedEvaluator::constrained_taylor(
+ValidatedConstrainedImageSet NeuralValidatedEvaluator::constrained_taylor(
     Vector<ValidatedTaylorModelDP> const& input) const {
     const auto& network=snapshot_.network();
     const SizeType input_count=input.size();
