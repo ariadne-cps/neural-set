@@ -22,7 +22,7 @@ endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # Pinned child commits guarantee their internal consistency.
     require_same_dependency_commit(Build CHAINS
-        "build" "ann|build" "set|build" "testing|build")
+        "build" "ann|build" "set|build")
 endif()
 
 setup_project()
@@ -53,7 +53,7 @@ setup_project_library(
     LINK_LIBRARIES neural_set
 )
 
-setup_standalone_project_tests(
+setup_standalone_project(
     TARGET ariadne-neural-set
     TEST_DIRECTORY tests
     TEST_TARGET tests
