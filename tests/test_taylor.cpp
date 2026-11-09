@@ -265,6 +265,85 @@ public:
         ARIADNE_TESTING_EXPECT_EQUAL(two_graph.dimension(),SizeType{2});
     }
 
+    void test_branched_and_constrained_input_contracts() {
+        const Sweeper<FloatDP> swp=ThresholdSweeper<FloatDP>(dp,1e-12);
+        auto const x=ValidatedTaylorModelDP::coordinate(1u,0u,swp);
+        auto const other=ValidatedTaylorModelDP::coordinate(2u,0u,swp);
+        NeuralValidatedEvaluator evaluator(NeuralParameterSnapshot(
+            NeuralNetwork(2,{{1,NeuralActivation::Identity}}),{1.0,1.0,0.0}));
+        Vector<ValidatedTaylorModelDP> const empty(0u,x);
+        Vector<ValidatedTaylorModelDP> const short_input{x};
+        Vector<ValidatedTaylorModelDP> const mismatch{x,other};
+        for(auto const& input:std::vector<Vector<ValidatedTaylorModelDP>>{empty,short_input,mismatch}) {
+            ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
+                (void)evaluator.branched_taylor(input));
+            ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
+                (void)evaluator.constrained_taylor(input));
+        }
+        NeuralValidatedEvaluator negative(NeuralParameterSnapshot(
+            NeuralNetwork(1,{{1,NeuralActivation::Relu}}),{1.0,-3.0}));
+        auto const branches=negative.branched_taylor(Vector<ValidatedTaylorModelDP>{x});
+        ARIADNE_TESTING_EXPECT_EQUAL(branches.size(),1u);
+        ARIADNE_TESTING_EXPECT_EQUAL(branches[0].number_of_constraints(),0u);
+        auto const zero=branches[0].function()(Vector<FloatDPBounds>{FloatDPBounds(0,dp)})[0u];
+        ARIADNE_TESTING_EXPECT_EQUAL(zero.lower_raw().get_d(),0.0);
+        ARIADNE_TESTING_EXPECT_EQUAL(zero.upper_raw().get_d(),0.0);
+
+        // The first branch splits at the second layer, while the next one
+        // cancels to zero: the final insertion must still enforce the cap.
+        NeuralValidatedEvaluator mixed(NeuralParameterSnapshot(
+            NeuralNetwork(1,{{2,NeuralActivation::Relu},{1,NeuralActivation::Relu}}),
+            {1.0,1.0,0.0,2.0,-1.0,1.0,-2.0}));
+        ARIADNE_TESTING_EXPECT_THROWS(std::length_error,
+            (void)mixed.branched_taylor(Vector<ValidatedTaylorModelDP>{x},2u));
+        ARIADNE_TESTING_EXPECT_EQUAL(
+            mixed.branched_taylor(Vector<ValidatedTaylorModelDP>{x},3u).size(),3u);
+    }
+
+    void test_smooth_activation_graphs() {
+        const Sweeper<FloatDP> swp=ThresholdSweeper<FloatDP>(dp,1e-12);
+        auto const x=ValidatedTaylorModelDP::coordinate(1u,0u,swp);
+        for(auto activation:{NeuralActivation::Identity,NeuralActivation::Tanh,
+                            NeuralActivation::Sigmoid,NeuralActivation::Softplus}) {
+            NeuralValidatedEvaluator evaluator(NeuralParameterSnapshot(
+                NeuralNetwork(1,{{1,activation}}),{1.0,0.0}));
+            auto const branches=evaluator.branched_taylor(Vector<ValidatedTaylorModelDP>{x});
+            auto const graph=evaluator.constrained_taylor(Vector<ValidatedTaylorModelDP>{x});
+            ARIADNE_TESTING_EXPECT_EQUAL(branches.size(),1u);
+            ARIADNE_TESTING_EXPECT_EQUAL(branches[0].number_of_constraints(),0u);
+            ARIADNE_TESTING_EXPECT_EQUAL(graph.number_of_parameters(),2u);
+            ARIADNE_TESTING_EXPECT_EQUAL(graph.number_of_constraints(),1u);
+            auto const reference=evaluator.bounds(FloatDPBoundsVector{FloatDPBounds(0,dp)})[0u];
+            for(auto const& value:std::vector<FloatDPBounds>{
+                branches[0].function()(Vector<FloatDPBounds>{FloatDPBounds(0,dp)})[0u],
+                graph.function()(Vector<FloatDPBounds>{FloatDPBounds(0,dp),FloatDPBounds(0,dp)})[0u]}) {
+                ARIADNE_TESTING_PROVE(value.lower_raw().get_d()<=reference.lower_raw().get_d());
+                ARIADNE_TESTING_PROVE(value.upper_raw().get_d()>=reference.upper_raw().get_d());
+            }
+        }
+    }
+
+    void test_nonfinite_taylor_and_graph_overflow() {
+        const Sweeper<FloatDP> swp=ThresholdSweeper<FloatDP>(dp,1e-12);
+        auto const x=ValidatedTaylorModelDP::coordinate(1u,0u,swp);
+        NeuralValidatedEvaluator evaluator(NeuralParameterSnapshot(
+            NeuralNetwork(1,{{1,NeuralActivation::Identity}}),{1.0,0.0}));
+        for(double value:{-std::numeric_limits<double>::infinity(),
+                           std::numeric_limits<double>::infinity()}) {
+            auto const nonfinite=ValidatedTaylorModelDP::constant(
+                1u,FloatDPBounds(ExactDouble(value),dp),swp);
+            ARIADNE_TESTING_EXPECT_THROWS(std::overflow_error,
+                (void)evaluator.taylor(Vector<ValidatedTaylorModelDP>{nonfinite}));
+        }
+        for(double weight:{-1e308,1e308}) {
+            NeuralValidatedEvaluator overflow(NeuralParameterSnapshot(
+                NeuralNetwork(1,{{1,NeuralActivation::Identity}}),{weight,0.0}));
+            auto const huge=x.create_constant(FloatDPBounds(ExactDouble(1e308),dp));
+            ARIADNE_TESTING_EXPECT_THROWS(std::overflow_error,
+                (void)overflow.constrained_taylor(Vector<ValidatedTaylorModelDP>{huge}));
+        }
+    }
+
     void test_input_remainder_is_preserved() {
         const Sweeper<FloatDP> swp=ThresholdSweeper<FloatDP>(dp,1e-12);
         auto uncertain=ValidatedTaylorModelDP::coordinate(1u,0u,swp);
@@ -291,5 +370,8 @@ int main(int argc,char** argv) {
     ARIADNE_TESTING_ADD_TEST(TestTaylor,test_stable_relu_and_multineuron_branch_limit);
     ARIADNE_TESTING_ADD_TEST(TestTaylor,test_implicit_relu_graph);
     ARIADNE_TESTING_ADD_TEST(TestTaylor,test_implicit_relu_remainder_and_depth);
+    ARIADNE_TESTING_ADD_TEST(TestTaylor,test_branched_and_constrained_input_contracts);
+    ARIADNE_TESTING_ADD_TEST(TestTaylor,test_smooth_activation_graphs);
+    ARIADNE_TESTING_ADD_TEST(TestTaylor,test_nonfinite_taylor_and_graph_overflow);
     return ARIADNE_TESTING_RUN_TESTS_WITH_ARGS(argc,argv);
 }

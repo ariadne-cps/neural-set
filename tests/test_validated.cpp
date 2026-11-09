@@ -88,6 +88,30 @@ public:
         }
     }
 
+    void test_invalid_bounds_and_negative_overflow() {
+        NeuralParameterSnapshot model(
+            NeuralNetwork(1,{{1,NeuralActivation::Identity}}),{1.0,0.0});
+        NeuralValidatedEvaluator evaluator(model);
+        ARIADNE_TESTING_EXPECT_EQUAL(evaluator.snapshot().values(),model.values());
+        double const infinity_value=std::numeric_limits<double>::infinity();
+        for(auto const& bounds:std::vector<FloatDPBounds>{
+                FloatDPBounds(ExactDouble(-infinity_value),ExactDouble(0.0),dp),
+                FloatDPBounds(ExactDouble(0.0),ExactDouble(infinity_value),dp),
+                FloatDPBounds(ExactDouble(2.0),ExactDouble(1.0),dp)}) {
+            ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
+                (void)evaluator.bounds(FloatDPBoundsVector{bounds}));
+        }
+        FloatDPExactBox invalid({FloatDPExactInterval(
+            FloatDP(ExactDouble(-infinity_value),dp),FloatDP(ExactDouble(0.0),dp))});
+        ARIADNE_TESTING_EXPECT_THROWS(std::invalid_argument,
+            (void)evaluator.bounds(invalid));
+        NeuralParameterSnapshot overflow(
+            NeuralNetwork(1,{{1,NeuralActivation::Identity}}),{-1e308,0.0});
+        ARIADNE_TESTING_EXPECT_THROWS(std::overflow_error,
+            (void)NeuralValidatedEvaluator(overflow).bounds(FloatDPBoundsVector{
+                FloatDPBounds(ExactDouble(1e308),dp)}));
+    }
+
     void test_ball_and_bounds_vectors() {
         NeuralParameterSnapshot model(
             NeuralNetwork(2,{{1,NeuralActivation::Identity}}),
@@ -182,5 +206,6 @@ int main(int argc,char** argv) {
     ARIADNE_TESTING_ADD_TEST(TestValidated,test_activations_and_sampled_inclusion);
     ARIADNE_TESTING_ADD_TEST(TestValidated,test_composed_network_and_invalid_boxes);
     ARIADNE_TESTING_ADD_TEST(TestValidated,test_ball_and_bounds_vectors);
+    ARIADNE_TESTING_ADD_TEST(TestValidated,test_invalid_bounds_and_negative_overflow);
     return ARIADNE_TESTING_RUN_TESTS_WITH_ARGS(argc,argv);
 }
