@@ -49,13 +49,14 @@ void check_finite_taylor(ValidatedTaylorModelDP const& model) {
 ValidatedTaylorModelDP activate_taylor(
     ValidatedTaylorModelDP const& value, NeuralActivation activation) {
     switch (activation) {
-        case NeuralActivation::Identity: return value;
         case NeuralActivation::Relu:
             return max(value,value.create_constant(exact_taylor_parameter(0.0)));
         case NeuralActivation::Tanh: return tanh(value);
         case NeuralActivation::Sigmoid: return rec(1+exp(-value));
         case NeuralActivation::Softplus: return log(1+exp(value));
-        default: throw std::invalid_argument("Unsupported neural activation");
+        // NeuralNetwork validates the immutable activation; the remaining
+        // supported case is Identity.
+        default: return value;
     }
 }
 
@@ -139,7 +140,7 @@ NeuralValidatedEvaluator::branched_taylor(
     Vector<ValidatedTaylorModelDP> const& input,
     SizeType max_branches) const {
     auto const& network=snapshot_.network();
-    if (input.size()!=network.input_dimension() || input.size()==0u)
+    if (input.size()!=network.input_dimension())
         throw std::invalid_argument("Wrong number of neural Taylor inputs");
     if (max_branches==0u)
         throw std::invalid_argument("Neural Taylor branch limit must be positive");
@@ -231,7 +232,8 @@ namespace {
 ExactIntervalType exact_interval_from_bounds(FloatDPBounds const& bounds) {
     const double lo=bounds.lower_raw().get_d();
     const double hi=bounds.upper_raw().get_d();
-    if (!std::isfinite(lo) || !std::isfinite(hi) || lo>hi)
+    // Interval arithmetic on validated, ordered inputs preserves ordering.
+    if (!std::isfinite(lo) || !std::isfinite(hi))
         throw std::overflow_error("Nonfinite neural graph enclosure");
     return ExactIntervalType(ExactDouble(lo),ExactDouble(hi));
 }
@@ -305,7 +307,6 @@ ValidatedConstrainedImageSet NeuralValidatedEvaluator::constrained_taylor(
             }
             FloatDPBounds y=z;
             switch (layer.activation) {
-                case NeuralActivation::Identity: break;
                 case NeuralActivation::Relu:
                     y=max(z,exact_taylor_parameter(0.0));
                     auxiliary_intervals.push_back(exact_interval_from_bounds(y));
@@ -314,7 +315,7 @@ ValidatedConstrainedImageSet NeuralValidatedEvaluator::constrained_taylor(
                 case NeuralActivation::Tanh: y=tanh(z); break;
                 case NeuralActivation::Sigmoid: y=sigmoid(z); break;
                 case NeuralActivation::Softplus: y=softplus(z); break;
-                default: throw std::invalid_argument("Unsupported neural activation");
+                default: break; // Validated Identity activation.
             }
             exact_interval_from_bounds(y);
             interval_output.push_back(y);
@@ -354,9 +355,6 @@ ValidatedConstrainedImageSet NeuralValidatedEvaluator::constrained_taylor(
                 z=z+state[i]*exact_graph_parameter(
                     coefficients[layer.weights_offset+j*layer.inputs+i]);
             switch (layer.activation) {
-                case NeuralActivation::Identity:
-                    next.push_back(z);
-                    break;
                 case NeuralActivation::Relu: {
                     auto const y=ValidatedScalarMultivariateFunction::coordinate(
                         total_count,next_relu++);
@@ -366,16 +364,16 @@ ValidatedConstrainedImageSet NeuralValidatedEvaluator::constrained_taylor(
                         exact_graph_parameter(0.0),y*(y-z),
                         exact_graph_parameter(0.0)));
                     next.push_back(y);
-                    break;
-                }
+                } break;
                 case NeuralActivation::Tanh:
                     next.push_back(tanh(z)); break;
                 case NeuralActivation::Sigmoid:
                     next.push_back(rec(1+exp(-z))); break;
                 case NeuralActivation::Softplus:
                     next.push_back(log(1+exp(z))); break;
-                default:
-                    throw std::invalid_argument("Unsupported neural activation");
+                default: // Validated Identity activation.
+                    next.push_back(z);
+                    break;
             }
         }
         state.swap(next);

@@ -338,10 +338,15 @@ public:
         for(double weight:{-1e308,1e308}) {
             NeuralValidatedEvaluator overflow(NeuralParameterSnapshot(
                 NeuralNetwork(1,{{1,NeuralActivation::Identity}}),{weight,0.0}));
-            auto const huge=x.create_constant(FloatDPBounds(ExactDouble(1e308),dp));
+            auto const huge=x.create_constant(FloatDPBounds(ExactDouble(2.0),dp));
             ARIADNE_TESTING_EXPECT_THROWS(std::overflow_error,
                 (void)overflow.constrained_taylor(Vector<ValidatedTaylorModelDP>{huge}));
         }
+        auto upper_overflow=x;
+        upper_overflow.set_value(FloatDP(ExactDouble(1e308),dp));
+        upper_overflow.set_gradient(0u,FloatDP(ExactDouble(1e308),dp));
+        ARIADNE_TESTING_EXPECT_THROWS(std::overflow_error,
+            (void)evaluator.taylor(Vector<ValidatedTaylorModelDP>{upper_overflow}));
     }
 
     void test_input_remainder_is_preserved() {

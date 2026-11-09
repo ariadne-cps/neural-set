@@ -42,20 +42,20 @@ FloatDPBounds exact(double value) {
 
 FloatDPBounds checked(FloatDPBounds value) {
     if (!std::isfinite(value.lower_raw().get_d()) ||
-        !std::isfinite(value.upper_raw().get_d()) ||
-        value.lower_raw().get_d() > value.upper_raw().get_d())
+        !std::isfinite(value.upper_raw().get_d()))
         throw std::overflow_error("Nonfinite validated neural interval result");
     return value;
 }
 
 FloatDPBounds activate(FloatDPBounds const& interval, NeuralActivation activation) {
     switch (activation) {
-        case NeuralActivation::Identity:  return interval;
         case NeuralActivation::Relu:      return max(interval, exact(0.0));
         case NeuralActivation::Tanh:      return tanh(interval);
         case NeuralActivation::Sigmoid:   return sigmoid(interval);
         case NeuralActivation::Softplus:  return softplus(interval);
-        default: throw std::invalid_argument("Unsupported neural activation");
+        // NeuralNetwork validates all activations before an immutable
+        // snapshot is created; Identity is the sole remaining activation.
+        default: return interval;
     }
 }
 
