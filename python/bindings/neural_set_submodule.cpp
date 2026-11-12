@@ -26,12 +26,13 @@
  *  @brief Expose validated neural evaluation and Taylor models to Python.
  */
 
-#include "pybind11.hpp"
-#include "neural-set/neural_set.hpp"
-#include "neural-set/validated.hpp"
-
 #include <stdexcept>
 #include <vector>
+
+#include "pybind11.hpp"
+
+#include "neural-set/neural_set.hpp"
+#include "neural-set/validated.hpp"
 
 using namespace Ariadne;
 
@@ -40,26 +41,26 @@ namespace {
 // Function already exposes the scalar ValidatedTaylorModelDP class to Python,
 // but not Vector<ValidatedTaylorModelDP>. Cross this boundary using ordinary
 // Python lists instead of defining a second, incompatible vector class.
-Vector<ValidatedTaylorModelDP> taylor_models_from_python(pybind11::list const& items) {
-    if (pybind11::len(items)==0)
+Vector<ValidatedTaylorModelDP> taylor_models_from_python(const pybind11::list& items) {
+    if (pybind11::len(items) == 0)
         throw std::invalid_argument("At least one neural Taylor input is required");
-    const auto first=items[0].cast<ValidatedTaylorModelDP>();
-    Vector<ValidatedTaylorModelDP> result(static_cast<SizeType>(pybind11::len(items)),first);
-    for (SizeType i=1u; i<result.size(); ++i)
-        result[i]=items[i].cast<ValidatedTaylorModelDP>();
+    const auto first = items[0].cast<ValidatedTaylorModelDP>();
+    Vector<ValidatedTaylorModelDP> result(static_cast<SizeType>(pybind11::len(items)), first);
+    for (SizeType i = 1u; i < result.size(); ++i)
+        result[i] = items[i].cast<ValidatedTaylorModelDP>();
     return result;
 }
 
-pybind11::list taylor_models_to_python(Vector<ValidatedTaylorModelDP> const& models) {
+pybind11::list taylor_models_to_python(const Vector<ValidatedTaylorModelDP>& models) {
     pybind11::list result;
-    for (SizeType i=0u; i<models.size(); ++i)
+    for (SizeType i = 0u; i < models.size(); ++i)
         result.append(pybind11::cast(models[i]));
     return result;
 }
 
-pybind11::list constrained_sets_to_python(List<ValidatedConstrainedImageSet> const& sets) {
+pybind11::list constrained_sets_to_python(const List<ValidatedConstrainedImageSet>& sets) {
     pybind11::list result;
-    for (auto const& set : sets)
+    for (const auto& set: sets)
         result.append(pybind11::cast(set));
     return result;
 }
@@ -70,30 +71,16 @@ void neural_set_submodule(pybind11::module& module) {
     module.def("neural_set_version", &neural_set_version);
 
     pybind11::class_<NeuralValidatedEvaluator>(module, "NeuralValidatedEvaluator")
-        .def(pybind11::init<NeuralParameterSnapshot>(),pybind11::arg("snapshot"))
-        .def("bounds",pybind11::overload_cast<FloatDPExactBox const&>(
-            &NeuralValidatedEvaluator::bounds,pybind11::const_),pybind11::arg("input_box"))
-        .def("bounds",pybind11::overload_cast<FloatDPBoundsVector const&>(
-            &NeuralValidatedEvaluator::bounds,pybind11::const_),pybind11::arg("input_bounds"))
-        .def("bounds",pybind11::overload_cast<FloatDPBallVector const&>(
-            &NeuralValidatedEvaluator::bounds,pybind11::const_),pybind11::arg("input_balls"))
-        .def("taylor",[](NeuralValidatedEvaluator const& evaluator,
-                           pybind11::list const& inputs) {
-            return taylor_models_to_python(evaluator.taylor(taylor_models_from_python(inputs)));
-        },pybind11::arg("inputs"))
-        .def("constrained_taylor",[](NeuralValidatedEvaluator const& evaluator,
-                                       pybind11::list const& inputs) {
-            return evaluator.constrained_taylor(taylor_models_from_python(inputs));
-        },pybind11::arg("inputs"))
-        .def("branched_taylor",[](NeuralValidatedEvaluator const& evaluator,
-                                    pybind11::list const& inputs, SizeType max_branches) {
-            return constrained_sets_to_python(
-                evaluator.branched_taylor(taylor_models_from_python(inputs),max_branches));
-        },pybind11::arg("inputs"),pybind11::arg("max_branches")=1024u);
+        .def(pybind11::init<NeuralParameterSnapshot>(), pybind11::arg("snapshot"))
+        .def("bounds", pybind11::overload_cast<const FloatDPExactBox&>(&NeuralValidatedEvaluator::bounds, pybind11::const_), pybind11::arg("input_box"))
+        .def("bounds", pybind11::overload_cast<const FloatDPBoundsVector&>(&NeuralValidatedEvaluator::bounds, pybind11::const_), pybind11::arg("input_bounds"))
+        .def("bounds", pybind11::overload_cast<const FloatDPBallVector&>(&NeuralValidatedEvaluator::bounds, pybind11::const_), pybind11::arg("input_balls"))
+        .def("taylor", [](const NeuralValidatedEvaluator& evaluator, const pybind11::list& inputs) { return taylor_models_to_python(evaluator.taylor(taylor_models_from_python(inputs))); }, pybind11::arg("inputs"))
+        .def("constrained_taylor", [](const NeuralValidatedEvaluator& evaluator, const pybind11::list& inputs) { return evaluator.constrained_taylor(taylor_models_from_python(inputs)); }, pybind11::arg("inputs"))
+        .def("branched_taylor", [](const NeuralValidatedEvaluator& evaluator, const pybind11::list& inputs, SizeType max_branches) { return constrained_sets_to_python(
+                                                                                                                                         evaluator.branched_taylor(taylor_models_from_python(inputs), max_branches)); }, pybind11::arg("inputs"), pybind11::arg("max_branches") = 1024u);
 
     module.def("neural_validated_bounds",
-        &neural_validated_bounds,
-        pybind11::arg("snapshot"),pybind11::arg("input_box"));
-
-
+               &neural_validated_bounds,
+               pybind11::arg("snapshot"), pybind11::arg("input_box"));
 }

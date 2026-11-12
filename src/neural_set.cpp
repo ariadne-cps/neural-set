@@ -30,6 +30,6 @@
 
 namespace Ariadne {
 
-char const* neural_set_version() noexcept { return "0.1.0"; }
+const char* neural_set_version() noexcept { return "0.1.0"; }
 
 } // namespace Ariadne

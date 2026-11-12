@@ -26,13 +26,13 @@
  *  @brief Verify the public Neural Set umbrella header.
  */
 
+#include <string_view>
+
 #include "ariadne-neural-set.hpp"
 #include "ariadne-testing.hpp"
 
-#include <string_view>
-
 class TestNeuralSetUmbrella : public Ariadne::Testing::ContextFixture {
-public:
+  public:
     using ContextFixture::ContextFixture;
     void test_public_header() {
         ARIADNE_TESTING_EXPECT_EQUAL(
@@ -43,6 +43,6 @@ public:
 
 int main(int argc, char** argv) {
     ARIADNE_TESTING_SUITE("neural_set umbrella");
-    ARIADNE_TESTING_ADD_TEST(TestNeuralSetUmbrella,test_public_header);
-    return ARIADNE_TESTING_RUN_TESTS_WITH_ARGS(argc,argv);
+    ARIADNE_TESTING_ADD_TEST(TestNeuralSetUmbrella, test_public_header);
+    return ARIADNE_TESTING_RUN_TESTS_WITH_ARGS(argc, argv);
 }

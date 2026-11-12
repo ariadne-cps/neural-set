@@ -31,7 +31,7 @@
 namespace Ariadne {
 
 /** @brief Return the installed NeuralSet module version. */
-char const* neural_set_version() noexcept;
+const char* neural_set_version() noexcept;
 
 } // namespace Ariadne
 

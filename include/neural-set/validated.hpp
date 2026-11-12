@@ -34,13 +34,13 @@
 #ifndef ARIADNE_NEURAL_SET_VALIDATED_HPP
 #define ARIADNE_NEURAL_SET_VALIDATED_HPP
 
-#include "ann/network.hpp"
-#include "geometry/box.hpp"
-#include "algebra/vector.hpp"
 #include "algebra/linear_algebra.decl.hpp"
+#include "algebra/vector.hpp"
+#include "ann/network.hpp"
+#include "function/taylor_model.hpp"
+#include "geometry/box.hpp"
 #include "numeric/float_ball.hpp"
 #include "numeric/float_bounds.hpp"
-#include "function/taylor_model.hpp"
 #include "set/function_set.hpp"
 
 namespace Ariadne {
@@ -53,12 +53,12 @@ namespace Ariadne {
  *  within the closed input box (not bitwise CPU inference semantics).
  */
 class NeuralValidatedEvaluator {
-public:
+  public:
     /** @brief Construct a validated evaluator from an immutable network snapshot. */
     explicit NeuralValidatedEvaluator(NeuralParameterSnapshot snapshot);
 
     /** @brief Immutable snapshot used by the evaluator. */
-    NeuralParameterSnapshot const& snapshot() const noexcept;
+    const NeuralParameterSnapshot& snapshot() const noexcept;
 
     /** @brief Enclose every real-valued network output for an input box.
      *
@@ -66,19 +66,19 @@ public:
      *  reversed input endpoints.
      *  @throws std::overflow_error for nonfinite intermediate enclosures.
      */
-    FloatDPUpperBox bounds(FloatDPExactBox const& input_box) const;
+    FloatDPUpperBox bounds(const FloatDPExactBox& input_box) const;
 
     /** @brief Propagate validated bounds through the network. */
-    FloatDPBoundsVector bounds(FloatDPBoundsVector const& input) const;
+    FloatDPBoundsVector bounds(const FloatDPBoundsVector& input) const;
 
     /** @brief Propagate full balls, including their radii, as bounds. */
-    FloatDPBoundsVector bounds(FloatDPBallVector const& input) const;
+    FloatDPBoundsVector bounds(const FloatDPBallVector& input) const;
 
     /** @brief Propagate validated Taylor models, retaining parameter dependencies.
      *  Each input model must have the same number of independent variables.
      *  ReLU uses Function\'s validated max enclosure, without branch splitting.
      */
-    Vector<ValidatedTaylorModelDP> taylor(Vector<ValidatedTaylorModelDP> const& input) const;
+    Vector<ValidatedTaylorModelDP> taylor(const Vector<ValidatedTaylorModelDP>& input) const;
 
     /** @brief Implicit neural graph as one validated constrained image set.
      *  This is the default representation. Original Taylor parameters,
@@ -89,7 +89,7 @@ public:
      *  input variable. No constraint solver is invoked automatically.
      */
     ValidatedConstrainedImageSet constrained_taylor(
-        Vector<ValidatedTaylorModelDP> const& input) const;
+        const Vector<ValidatedTaylorModelDP>& input) const;
 
     /** @brief Alternative explicit activation-branch representation.
      *  Each branch is a validated constrained image set on the original
@@ -97,17 +97,17 @@ public:
      *  @throws std::length_error if max_branches would be exceeded.
      */
     List<ValidatedConstrainedImageSet> branched_taylor(
-        Vector<ValidatedTaylorModelDP> const& input,
-        SizeType max_branches=1024u) const;
+        const Vector<ValidatedTaylorModelDP>& input,
+        SizeType max_branches = 1024u) const;
 
-private:
+  private:
     NeuralParameterSnapshot snapshot_;
 };
 
 /** @brief Convenience wrapper for one validated evaluation. */
 FloatDPUpperBox neural_validated_bounds(
-    NeuralParameterSnapshot const& snapshot,
-    FloatDPExactBox const& input_box);
+    const NeuralParameterSnapshot& snapshot,
+    const FloatDPExactBox& input_box);
 
 } // namespace Ariadne
 

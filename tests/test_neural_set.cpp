@@ -26,13 +26,13 @@
  *  @brief Test Neural Set module identity and version reporting.
  */
 
-#include "neural-set/neural_set.hpp"
-#include "ariadne-testing.hpp"
-
 #include <string_view>
 
+#include "ariadne-testing.hpp"
+#include "neural-set/neural_set.hpp"
+
 class TestNeuralSet : public Ariadne::Testing::ContextFixture {
-public:
+  public:
     using ContextFixture::ContextFixture;
     void test_version() {
         ARIADNE_TESTING_EXPECT_EQUAL(
@@ -43,6 +43,6 @@ public:
 
 int main(int argc, char** argv) {
     ARIADNE_TESTING_SUITE("neural_set");
-    ARIADNE_TESTING_ADD_TEST(TestNeuralSet,test_version);
-    return ARIADNE_TESTING_RUN_TESTS_WITH_ARGS(argc,argv);
+    ARIADNE_TESTING_ADD_TEST(TestNeuralSet, test_version);
+    return ARIADNE_TESTING_RUN_TESTS_WITH_ARGS(argc, argv);
 }

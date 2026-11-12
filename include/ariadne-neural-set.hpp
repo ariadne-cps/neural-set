@@ -30,7 +30,6 @@
 
 #include "ariadne-ann.hpp"
 #include "ariadne-set.hpp"
-
 #include "neural-set/neural_set.hpp"
 #include "neural-set/validated.hpp"
 
