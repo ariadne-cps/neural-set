@@ -1,5 +1,5 @@
 /***************************************************************************
- *            src/validated.cpp
+ *            validated.cpp
  *
  *  Copyright  2026  Luca Geretti
  *
@@ -20,6 +20,10 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with Ariadne Neural Set. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/** @file src/validated.cpp
+ *  @brief Implement outward-rounded bounds for frozen neural networks.
  */
 
 #include "neural-set/validated.hpp"

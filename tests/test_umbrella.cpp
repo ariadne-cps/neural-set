@@ -1,5 +1,5 @@
 /***************************************************************************
- *            tests/test_umbrella.cpp
+ *            test_umbrella.cpp
  *
  *  Copyright  2026  Luca Geretti
  *
@@ -20,6 +20,10 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with Ariadne Neural Set. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/** @file tests/test_umbrella.cpp
+ *  @brief Verify the public Neural Set umbrella header.
  */
 
 #include "ariadne-neural-set.hpp"

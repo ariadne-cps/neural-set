@@ -1,5 +1,5 @@
 /***************************************************************************
- *            include/neural-set/validated.hpp
+ *            validated.hpp
  *
  *  Copyright  2026  Luca Geretti
  *
@@ -54,6 +54,7 @@ namespace Ariadne {
  */
 class NeuralValidatedEvaluator {
 public:
+    /** @brief Construct a validated evaluator from an immutable network snapshot. */
     explicit NeuralValidatedEvaluator(NeuralParameterSnapshot snapshot);
 
     /** @brief Immutable snapshot used by the evaluator. */

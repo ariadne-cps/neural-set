@@ -1,5 +1,5 @@
 /***************************************************************************
- *            src/neural_set.cpp
+ *            neural_set.cpp
  *
  *  Copyright  2026  Luca Geretti
  *
@@ -20,6 +20,10 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with Ariadne Neural Set. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/** @file src/neural_set.cpp
+ *  @brief Implement the Neural Set module version query.
  */
 
 #include "neural-set/neural_set.hpp"

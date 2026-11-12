@@ -1,5 +1,5 @@
 /***************************************************************************
- *            tests/test_validated.cpp
+ *            test_validated.cpp
  *
  *  Copyright  2026  Luca Geretti
  *
@@ -20,6 +20,10 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with Ariadne Neural Set. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/** @file tests/test_validated.cpp
+ *  @brief Test validated bounds, activations and evaluator behavior.
  */
 
 #include "ariadne-neural-set.hpp"

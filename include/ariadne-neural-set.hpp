@@ -1,5 +1,5 @@
 /***************************************************************************
- *            include/ariadne-neural-set.hpp
+ *            ariadne-neural-set.hpp
  *
  *  Copyright  2026  Luca Geretti
  *

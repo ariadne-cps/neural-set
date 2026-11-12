@@ -1,5 +1,5 @@
 /***************************************************************************
- *            tutorial/tutorial_neural_set.cpp
+ *            tutorial_neural_set.cpp
  *
  *  Copyright  2026  Luca Geretti
  *
@@ -20,6 +20,10 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with Ariadne Neural Set. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/** @file tutorial/tutorial_neural_set.cpp
+ *  @brief Demonstrate validated neural bounds and Taylor-model evaluation.
  */
 
 #include "ariadne-neural-set.hpp"

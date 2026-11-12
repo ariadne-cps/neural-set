@@ -1,5 +1,5 @@
 /***************************************************************************
- *            python/bindings/neural_set_module.cpp
+ *            neural_set_module.cpp
  *
  *  Copyright  2026  Luca Geretti
  *
@@ -20,6 +20,10 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with Ariadne Neural Set. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/** @file python/bindings/neural_set_module.cpp
+ *  @brief Register the Neural Set Python module.
  */
 
 #include "pybind11.hpp"

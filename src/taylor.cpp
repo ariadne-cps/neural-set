@@ -1,5 +1,5 @@
 /***************************************************************************
- *            src/taylor.cpp
+ *            taylor.cpp
  *
  *  Copyright  2026  Luca Geretti
  *
@@ -20,6 +20,10 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with Ariadne Neural Set. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/** @file src/taylor.cpp
+ *  @brief Implement validated Taylor propagation and constrained neural representations.
  */
 
 #include "neural-set/validated.hpp"

@@ -1,5 +1,5 @@
 /***************************************************************************
- *            include/neural-set/neural_set.hpp
+ *            neural_set.hpp
  *
  *  Copyright  2026  Luca Geretti
  *
