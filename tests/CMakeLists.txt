@@ -10,7 +10,7 @@ foreach(TEST IN LISTS UNIT_TESTS)
     add_executable(${TEST} ${TEST}.cpp)
     target_link_libraries(${TEST} PRIVATE
         ariadne-neural-set neural_set ariadne-testing)
-    add_test(NAME ${TEST} COMMAND $<TARGET_FILE:${TEST}> --concise)
+    add_test(NAME ${TEST} COMMAND $<TARGET_FILE:${TEST}> --concise --logtonull)
     set_property(TEST ${TEST} PROPERTY LABELS "neural_set")
     if(WIN32)
         set_tests_properties(${TEST} PROPERTIES

@@ -30,6 +30,7 @@
 #include <stdexcept>
 
 #include "algebra/sweeper.hpp"
+#include "logging/test_runner.hpp"
 #include "numeric/builtin.hpp"
 
 #include "ariadne-neural-set.hpp"
@@ -430,5 +431,5 @@ int main(int argc, char** argv) {
     ARIADNE_TESTING_ADD_TEST(TestTaylor, test_branched_and_constrained_input_contracts);
     ARIADNE_TESTING_ADD_TEST(TestTaylor, test_smooth_activation_graphs);
     ARIADNE_TESTING_ADD_TEST(TestTaylor, test_nonfinite_taylor_and_graph_overflow);
-    return ARIADNE_TESTING_RUN_TESTS_WITH_ARGS(argc, argv);
+    return Ariadne::Testing::run_logging_suite(ariadne_test_suite, argc, argv);
 }

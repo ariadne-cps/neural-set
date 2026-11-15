@@ -31,6 +31,7 @@
 #include <stdexcept>
 
 #include "ann/backend.hpp"
+#include "logging/test_runner.hpp"
 #include "numeric/builtin.hpp"
 #include "numeric/floats.hpp"
 
@@ -223,5 +224,5 @@ int main(int argc, char** argv) {
     ARIADNE_TESTING_ADD_TEST(TestValidated, test_composed_network_and_invalid_boxes);
     ARIADNE_TESTING_ADD_TEST(TestValidated, test_ball_and_bounds_vectors);
     ARIADNE_TESTING_ADD_TEST(TestValidated, test_invalid_bounds_and_negative_overflow);
-    return ARIADNE_TESTING_RUN_TESTS_WITH_ARGS(argc, argv);
+    return Ariadne::Testing::run_logging_suite(ariadne_test_suite, argc, argv);
 }
